@@ -39,6 +39,17 @@
       <span class="material-symbols-outlined" aria-hidden="true">public</span>
     </button>
   </nav>
+  <!-- Bottom-left map zoom (Google Earth style): magnifier, −, altitude slider, + -->
+  <nav id="map-zoom-control" aria-label="Map zoom">
+    <span class="map-zoom-glyph material-symbols-outlined" aria-hidden="true">search</span>
+    <button id="map-zoom-out" type="button" aria-label="Zoom out" title="Zoom out (−)">
+      <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+    </button>
+    <input id="map-zoom-slider" type="range" min="0" max="1000" step="1" value="0" aria-label="Map zoom level" title="Drag to zoom (left: farther, right: closer)" />
+    <button id="map-zoom-in" type="button" aria-label="Zoom in" title="Zoom in (+)">
+      <span class="material-symbols-outlined" aria-hidden="true">add</span>
+    </button>
+  </nav>
   <div id="global-loading-status" role="status" aria-live="polite" aria-atomic="true" hidden>
     <span id="global-loading-label">LOADING LIVE DATA</span>
     <span id="global-loading-detail"></span>

@@ -20,6 +20,7 @@ import { LocalSdrControls } from './localSdrControls.js';
 import { LocationNavigation } from './locationNavigation.js';
 import { bindClearLayersControl } from './layers.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
+import { bindMapZoomControls } from './mapZoomControls.js';
 import { createMapSourceControls } from './mapSource.js';
 import { STYLES } from './effects.js';
 import { isHudLayout } from '../hudLayouts.js';
@@ -527,6 +528,8 @@ export class StyleManager extends ShellFacade {
         _toggleOrbit: (...args) => this._toggleOrbit(...args),
         toggleCleanView: (...args) => this.toggleCleanView(...args),
         _toggleCctvEnabled: (...args) => this._toggleCctvEnabled(...args),
+        _zoomMapIn: () => this._mapZoomControls?.zoomIn(),
+        _zoomMapOut: () => this._mapZoomControls?.zoomOut(),
         _setBloomEnabled: (...args) => this._setBloomEnabled(...args),
         _setBloomIntensity: (...args) => this._setBloomIntensity(...args),
         _setSharpenEnabled: (...args) => this._setSharpenEnabled(...args),
@@ -573,6 +576,7 @@ export class StyleManager extends ShellFacade {
     this._initLocationBar();
     this._initShareButton();
     this._initCameraOrientationControls();
+    this._initMapZoomControls();
     this._initClearSelectedLayersButton();
     this._initHUDToggle();
     this._initModels3dToggle();
@@ -1423,6 +1427,21 @@ export class StyleManager extends ShellFacade {
     });
   }
 
+  /** Wire the bottom-left Google Earth-style zoom cluster (−, slider, +). */
+  _initMapZoomControls() {
+    this._mapZoomControls?.destroy();
+    this._mapZoomControls = bindMapZoomControls({
+      viewer: this.viewer,
+      elements: {
+        zoomInButton: this._mapZoomInBtn,
+        zoomOutButton: this._mapZoomOutBtn,
+        slider: this._mapZoomSlider,
+      },
+      runNavigation: (noun, navigate) =>
+        this._navigation.runOrientation(noun, navigate),
+    });
+  }
+
   // ── Share Button ─────────────────────────────
 
   /**
@@ -1531,6 +1550,7 @@ export class StyleManager extends ShellFacade {
     this._displayBindings.destroy();
     this._mapSourceControls?.destroy();
     this._cameraOrientationControls?.destroy();
+    this._mapZoomControls?.destroy();
     this._clearLayersControl?.destroy();
     this._cctvControls?.destroy();
     this._radioControls?.destroy();

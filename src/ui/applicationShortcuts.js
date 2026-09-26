@@ -38,6 +38,11 @@ export function bindApplicationShortcuts({
     if (key === 'f') actions.toggleLayers();
     if (key === 'd') actions.cycleDetection();
     if (key === 'c') actions.toggleCctv();
+    // Globe zoom. Cmd/Ctrl/Alt combinations stay with the browser (page zoom).
+    if (!event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (key === '+' || key === '=') actions.zoomIn?.();
+      if (key === '-' || key === '_') actions.zoomOut?.();
+    }
   };
   documentRef.addEventListener('keydown', onKeyDown);
   return {

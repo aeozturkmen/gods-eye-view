@@ -89,6 +89,8 @@ export class DisplayBindings {
           this._syncShareState();
         },
         toggleCctv: () => this._toggleCctvEnabled(),
+        zoomIn: () => this._zoomMapIn(),
+        zoomOut: () => this._zoomMapOut(),
       },
     });
 
