@@ -21,6 +21,11 @@ import { LocationNavigation } from './locationNavigation.js';
 import { bindClearLayersControl } from './layers.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
 import { bindMapZoomControls } from './mapZoomControls.js';
+import {
+  isDeclutterEnabled,
+  restoreDeclutterPreference,
+  setDeclutterEnabled,
+} from '../declutter.js';
 import { createMapSourceControls } from './mapSource.js';
 import { STYLES } from './effects.js';
 import { isHudLayout } from '../hudLayouts.js';
@@ -530,6 +535,7 @@ export class StyleManager extends ShellFacade {
         _toggleCctvEnabled: (...args) => this._toggleCctvEnabled(...args),
         _zoomMapIn: () => this._mapZoomControls?.zoomIn(),
         _zoomMapOut: () => this._mapZoomControls?.zoomOut(),
+        _toggleDeclutter: () => this.toggleDeclutter(),
         _setBloomEnabled: (...args) => this._setBloomEnabled(...args),
         _setBloomIntensity: (...args) => this._setBloomIntensity(...args),
         _setSharpenEnabled: (...args) => this._setSharpenEnabled(...args),
@@ -577,6 +583,7 @@ export class StyleManager extends ShellFacade {
     this._initShareButton();
     this._initCameraOrientationControls();
     this._initMapZoomControls();
+    this._initDeclutterToggle();
     this._initClearSelectedLayersButton();
     this._initHUDToggle();
     this._initModels3dToggle();
@@ -1267,6 +1274,7 @@ export class StyleManager extends ShellFacade {
       },
       recording: !!this._recording._recordingMode,
       cleanView: document.body.classList.contains('ui-clean-view'),
+      declutter: isDeclutterEnabled(),
     };
   }
 
@@ -1442,6 +1450,43 @@ export class StyleManager extends ShellFacade {
     });
   }
 
+  /** Wire the quiet-map (declutter) toggle and restore the remembered choice. */
+  _initDeclutterToggle() {
+    this._removeDeclutterToggle?.();
+    restoreDeclutterPreference();
+    this._syncDeclutterButton();
+    const button = this._declutterBtn;
+    if (!button) return;
+    const onClick = () => this.toggleDeclutter();
+    button.addEventListener('click', onClick);
+    this._removeDeclutterToggle = () => {
+      button.removeEventListener('click', onClick);
+      this._removeDeclutterToggle = null;
+    };
+  }
+
+  _syncDeclutterButton() {
+    const enabled = isDeclutterEnabled();
+    this._declutterBtn?.setAttribute('aria-pressed', String(enabled));
+    this._declutterBtn?.classList.toggle('active', enabled);
+  }
+
+  /**
+   * Shrink and dim every map marker, label and ambient card (never hide them),
+   * or restore them exactly.
+   * @param {boolean} [forceEnabled]
+   * @returns {{ok: boolean, declutter: boolean}}
+   */
+  toggleDeclutter(forceEnabled) {
+    const next =
+      typeof forceEnabled === 'boolean' ? forceEnabled : !isDeclutterEnabled();
+    setDeclutterEnabled(next);
+    this._syncDeclutterButton();
+    this.viewer?.scene?.requestRender?.();
+    this._showToast(next ? 'Quiet map on' : 'Quiet map off');
+    return { ok: true, declutter: next };
+  }
+
   // ── Share Button ─────────────────────────────
 
   /**
@@ -1551,6 +1596,7 @@ export class StyleManager extends ShellFacade {
     this._mapSourceControls?.destroy();
     this._cameraOrientationControls?.destroy();
     this._mapZoomControls?.destroy();
+    this._removeDeclutterToggle?.();
     this._clearLayersControl?.destroy();
     this._cctvControls?.destroy();
     this._radioControls?.destroy();

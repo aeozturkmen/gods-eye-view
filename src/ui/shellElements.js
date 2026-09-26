@@ -167,6 +167,7 @@ export function readShellElements(document = globalThis.document) {
     _mapZoomInBtn: document.getElementById('map-zoom-in'),
     _mapZoomOutBtn: document.getElementById('map-zoom-out'),
     _mapZoomSlider: document.getElementById('map-zoom-slider'),
+    _declutterBtn: document.getElementById('declutter-toggle'),
     _clearSelectedLayersBtn: document.getElementById('clear-selected-layers'),
     _globalLoadingStatus: document.getElementById('global-loading-status'),
     _globalLoadingLabel: document.getElementById('global-loading-label'),

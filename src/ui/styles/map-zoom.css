@@ -71,6 +71,28 @@
   transform: scale(0.94);
 }
 
+#map-zoom-control .map-zoom-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--glass-border-hover);
+}
+
+/* Quiet map (declutter) toggle: lit while markers are shrunk and dimmed. */
+#declutter-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.22);
+}
+
+:root[data-ui-theme='cyber'] #declutter-toggle[aria-pressed='true'] {
+  border-color: var(--cyber-red, #e0393e);
+  color: var(--cyber-red-bright, #ff5a5f);
+  background: rgba(64, 45, 46, 0.94);
+  box-shadow: none;
+}
+
 #map-zoom-slider {
   width: 112px;
   height: 18px;

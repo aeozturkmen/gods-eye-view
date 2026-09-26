@@ -1,6 +1,7 @@
 import { paintTransitBracket } from './detectionDraw.js';
 import * as Cesium from 'cesium';
 import { governorRequestRender } from '../renderGovernor.js';
+import { declutterFactors, DECLUTTER_CHANGE_EVENT } from '../declutter.js';
 import {
   DETECTION_ENABLE_FADE_MS,
   countAnimatingRenderEntries,
@@ -645,8 +646,14 @@ function _syncSurfaceVisibility() {
   governorRequestRender('detection-visibility');
   if (!_hostSurface) return;
   _hostSurface.style.display = _mode === MODE_OFF ? 'none' : 'block';
-  _hostSurface.style.opacity = _suspended ? '0' : '1';
+  // Quiet map (declutter) dims brackets, IDs and callouts with the contacts.
+  _hostSurface.style.opacity = _suspended
+    ? '0'
+    : String(declutterFactors().alpha);
 }
+globalThis.addEventListener?.(DECLUTTER_CHANGE_EVENT, () =>
+  _syncSurfaceVisibility(),
+);
 
 /**
  * Returns the active theme's key colors so other overlays (e.g. the tracked-target
@@ -1112,6 +1119,9 @@ function _paintCalloutLane(frame) {
   if (_mode === MODE_OFF || _suspended) return;
   const ctx = frame.ctx;
   if (!ctx) return;
+  // Callouts paint on the shared canvas, not the dimmed detection surface, so
+  // quiet map (declutter) applies its alpha here too.
+  const quiet = declutterFactors().alpha;
   for (const bands of _transitBracketPaths.values()) {
     for (const entry of bands) {
       if (entry)
@@ -1119,7 +1129,7 @@ function _paintCalloutLane(frame) {
           ctx,
           entry.path,
           entry.color,
-          entry.alpha * _transitBracketAlpha,
+          entry.alpha * _transitBracketAlpha * quiet,
         );
     }
   }
@@ -1127,7 +1137,7 @@ function _paintCalloutLane(frame) {
   ctx.textBaseline = 'alphabetic';
   for (let i = 0; i < _calloutCount; i++) {
     const row = _calloutPool[i];
-    paintDetectionCallout(ctx, row, row.alpha);
+    paintDetectionCallout(ctx, row, row.alpha * quiet);
   }
   ctx.globalAlpha = 1;
 }

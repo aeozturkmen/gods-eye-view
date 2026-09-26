@@ -38,6 +38,7 @@ export function bindApplicationShortcuts({
     if (key === 'f') actions.toggleLayers();
     if (key === 'd') actions.cycleDetection();
     if (key === 'c') actions.toggleCctv();
+    if (key === 'x') actions.toggleDeclutter?.();
     // Globe zoom. Cmd/Ctrl/Alt combinations stay with the browser (page zoom).
     if (!event.metaKey && !event.ctrlKey && !event.altKey) {
       if (key === '+' || key === '=') actions.zoomIn?.();

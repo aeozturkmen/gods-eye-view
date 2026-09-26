@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { createCyberSonarGpu } from './cyberSonarGpu.js';
+import { declutterFactors, DECLUTTER_CHANGE_EVENT } from './declutter.js';
 import {
   applyCyberSonarPrimitive,
   createCyberSonarSampler,
@@ -48,12 +49,23 @@ export function createCyberSonarScene(viewer, manager) {
   let sampler, width, height, active, count;
   const stats = { contacts: 0, updateMs: 0, frames: 0 };
   const root = globalThis.document?.documentElement;
-  const gpu = createCyberSonarGpu(scene, () => ({
-    ...readCyberSonarSettings(),
-    enabled: isCyberContactThemeActive(),
-    active: isCyberContactSonarActive(),
-    angle: cyberSonarAngleDeg(performance.now()),
-  }));
+  const gpu = createCyberSonarGpu(scene, () => {
+    const sonar = isCyberContactThemeActive();
+    const declutter = declutterFactors();
+    return {
+      ...readCyberSonarSettings(),
+      // The same derived-shader pass serves the cyber sonar look and the
+      // theme-independent declutter (smaller, dimmer contacts).
+      enabled: sonar || declutter.enabled,
+      sonar,
+      declutterScale: declutter.scale,
+      declutterAlpha: declutter.alpha,
+      active: isCyberContactSonarActive(),
+      angle: cyberSonarAngleDeg(performance.now()),
+    };
+  });
+  const onDeclutter = () => scene.requestRender();
+  globalThis.addEventListener?.(DECLUTTER_CHANGE_EVENT, onDeclutter);
   stats.gpu = gpu.stats;
   let gpuSupported = gpu.stats.supported;
   diagnostics.set(viewer, stats);
@@ -200,6 +212,7 @@ export function createCyberSonarScene(viewer, manager) {
     removeUpdate();
     removeRender?.();
     removePostRender?.();
+    globalThis.removeEventListener?.(DECLUTTER_CHANGE_EVENT, onDeclutter);
     gpu.destroy();
     if (root?.dataset) delete root.dataset.cyberSonarGpu;
     unsubscribe?.();

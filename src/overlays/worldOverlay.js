@@ -21,6 +21,7 @@ import {
   placementVariants,
 } from './worldOverlayDraw.js';
 import { WORLD_OVERLAY_STYLE } from './worldOverlayTokens.js';
+import { declutterFactors, DECLUTTER_CHANGE_EVENT } from '../declutter.js';
 
 /**
  * @module worldOverlay
@@ -73,6 +74,17 @@ export const WORLD_OVERLAY_PAINT_LANES = Object.freeze([
 const PAINT_LANE_INDEX = new Map(
   WORLD_OVERLAY_PAINT_LANES.map((lane, index) => [lane, index]),
 );
+/** Declutter shrinks/dims lanes below this one; selected and tracked keep full size. */
+const DECLUTTER_LANE_LIMIT = PAINT_LANE_INDEX.get('selected');
+// Read once here and then on each toggle event, never per candidate.
+let _declutterScale = declutterFactors().scale;
+let _declutterAlpha = declutterFactors().alpha;
+globalThis.addEventListener?.(DECLUTTER_CHANGE_EVENT, () => {
+  const factors = declutterFactors();
+  _declutterScale = factors.scale;
+  _declutterAlpha = factors.alpha;
+  _viewer?.scene?.requestRender?.();
+});
 
 /**
  * Unified UI exclusion inventory. Selectors may match multiple elements; the
@@ -1988,6 +2000,13 @@ function snapshotAndProject(entry, source, viewProjection, keyhole) {
   } else {
     record.sourceAlpha = source.options.alpha * entry.sourceAlpha;
   }
+  // Declutter shrinks ambient cards at layout time, so placement and
+  // collision see the smaller size (selected/tracked keep theirs).
+  if (
+    _declutterScale !== 1 &&
+    paintLaneForOverlayEntry(entry) < DECLUTTER_LANE_LIMIT
+  )
+    record.paintScale *= _declutterScale;
   if (
     record.distanceAlpha <= 0 ||
     record.paintScale <= 0 ||
@@ -2469,12 +2488,14 @@ function paintEntryItem(item, keyhole, sonar) {
   // All five channels are normalized at their source. Keep the multiply on
   // the hot paint path so its intermediate doubles remain unboxed; the pure
   // `combinedOverlayAlpha` export still specifies/tests the same binding.
+  const declutter = item.lane < DECLUTTER_LANE_LIMIT;
   const finalAlpha =
     record.sourceAlpha *
     item.temporalAlpha *
     record.distanceAlpha *
     record.altitudeAlpha *
     keyholeAlpha *
+    (declutter ? _declutterAlpha : 1) *
     (sonar ? sonar.label(sonar.at(placement.anchorX, placement.anchorY)) : 1);
   if (finalAlpha <= 0.001) return;
   if (record.paintScale === 1) {

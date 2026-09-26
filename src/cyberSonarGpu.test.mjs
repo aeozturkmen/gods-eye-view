@@ -101,7 +101,21 @@ test('GPU shader transform is isolated, settings-driven, and precedes native fra
       ),
     );
     assert.match(next.sources[1], /anchor.xy \/ anchor.w/);
-    assert.doesNotMatch(next.sources[1], /gl_Position\s*[=\/]/);
+    // Sonar never changes geometry. Declutter's shrink is the only geometry
+    // write, gated on its scale uniform; picks keep the native command.
+    const [beforeDeclutter, declutterBlock] = next.sources[1].split(
+      'if (u_gevDeclutter.x < 0.9999)',
+    );
+    assert.ok(declutterBlock, 'declutter scale must be gated');
+    assert.doesNotMatch(beforeDeclutter, /gl_Position\s*[=\/]|gl_PointSize/);
+    assert.match(
+      declutterBlock,
+      kind === 'point'
+        ? /gl_PointSize \*= u_gevDeclutter.x/
+        : /gl_Position.xy = \(anchorNdc \+ \(cornerNdc - anchorNdc\) \* u_gevDeclutter.x\)/,
+    );
+    assert.match(next.sources[1], /v_color.a \*= u_gevDeclutter.y/);
+    assert.match(next.sources[1], /if \(u_gevDeclutter.z > 0.5\)/);
   }
   assert.equal(
     sonarVertexSource(

@@ -79,36 +79,49 @@ uniform vec4 u_gevSonar; // angle, radius, opacity floor, sweep enabled
 uniform vec2 u_gevSonarViewport;
 uniform float u_gevSonarSector;
 uniform float u_gevSonarLabelBackground;
+uniform vec3 u_gevDeclutter; // contact scale, contact alpha, sonar theme enabled
 void main() {
     gev_sonar_main();
     // All corners/glyphs share the contact anchor, before native screen offsets.
-    // Leave gl_Position untouched so appearance never changes geometry or picks.
     vec4 anchor = czm_modelViewProjectionRelativeToEye * czm_translateRelativeToEye(${attribute}.xyz, ${lowAttribute}.xyz);
     if (anchor.w <= 0.0) return;
-    vec2 pixel = anchor.xy / anchor.w * u_gevSonarViewport * 0.5;
-    float floorValue = u_gevSonar.z;
-    float factor = floorValue + (1.0 - floorValue) * 0.46;
-    if (u_gevSonar.w > 0.5) {
-        float distanceSquared = dot(pixel, pixel);
-        float radiusSquared = u_gevSonar.y * u_gevSonar.y;
-        float delta = mod(degrees(atan(pixel.x, pixel.y)) - u_gevSonar.x + 360.0, 360.0);
-        if (delta > 359.9999) delta = 0.0;
-        factor = floorValue;
-        if (distanceSquared < radiusSquared * 0.000625) factor = 1.0;
-        else if (distanceSquared <= radiusSquared && delta <= u_gevSonarSector)
-            factor += (1.0 - floorValue) * min(1.0, (u_gevSonarSector - delta) / min(10.0, u_gevSonarSector * 0.42));
+    if (u_gevDeclutter.z > 0.5) {
+        vec2 pixel = anchor.xy / anchor.w * u_gevSonarViewport * 0.5;
+        float floorValue = u_gevSonar.z;
+        float factor = floorValue + (1.0 - floorValue) * 0.46;
+        if (u_gevSonar.w > 0.5) {
+            float distanceSquared = dot(pixel, pixel);
+            float radiusSquared = u_gevSonar.y * u_gevSonar.y;
+            float delta = mod(degrees(atan(pixel.x, pixel.y)) - u_gevSonar.x + 360.0, 360.0);
+            if (delta > 359.9999) delta = 0.0;
+            factor = floorValue;
+            if (distanceSquared < radiusSquared * 0.000625) factor = 1.0;
+            else if (distanceSquared <= radiusSquared && delta <= u_gevSonarSector)
+                factor += (1.0 - floorValue) * min(1.0, (u_gevSonarSector - delta) / min(10.0, u_gevSonarSector * 0.42));
+        }
+        #ifdef SDF
+        factor = (1.0 + factor) * 0.5;
+        #else
+        if (u_gevSonarLabelBackground > 0.5) factor = (1.0 + factor) * 0.5;
+        #endif
+        float coverage = floorValue >= 0.9999 ? 1.0 : clamp((factor - floorValue) / (1.0 - floorValue), 0.0, 1.0);
+        if (u_gevSonarLabelBackground < 0.5)
+            v_color.rgb = v_color.rgb * 0.28 + (vec3(0.62, 0.68, 0.72) + vec3(0.38, 0.16, 0.12) * coverage) * 0.72;
+        // Apply before native fragment pass classification, never after main().
+        v_color.a *= factor;
+        ${kind === 'point' ? 'v_outlineColor.a *= factor;' : '#ifdef SDF\n        v_outlineColor.a *= factor;\n        #endif'}
     }
-    #ifdef SDF
-    factor = (1.0 + factor) * 0.5;
-    #else
-    if (u_gevSonarLabelBackground > 0.5) factor = (1.0 + factor) * 0.5;
-    #endif
-    float coverage = floorValue >= 0.9999 ? 1.0 : clamp((factor - floorValue) / (1.0 - floorValue), 0.0, 1.0);
-    if (u_gevSonarLabelBackground < 0.5)
-        v_color.rgb = v_color.rgb * 0.28 + (vec3(0.62, 0.68, 0.72) + vec3(0.38, 0.16, 0.12) * coverage) * 0.72;
-    // Apply before native fragment pass classification, never after main().
-    v_color.a *= factor;
-    ${kind === 'point' ? 'v_outlineColor.a *= factor;' : '#ifdef SDF\n    v_outlineColor.a *= factor;\n    #endif'}
+    // Declutter: dim and shrink contacts. Render pass only (picks keep the
+    // native, full-size command), so hit areas and layer state never change.
+    v_color.a *= u_gevDeclutter.y;
+    ${kind === 'point' ? 'v_outlineColor.a *= u_gevDeclutter.y;' : '#ifdef SDF\n    v_outlineColor.a *= u_gevDeclutter.y;\n    #endif'}
+    if (u_gevDeclutter.x < 0.9999) {
+        ${kind === 'point' ? 'gl_PointSize *= u_gevDeclutter.x;' : `// Scale each quad/glyph about its contact anchor in NDC, so a label
+        // shrinks as one piece and stays attached to its marker.
+        vec2 anchorNdc = anchor.xy / anchor.w;
+        vec2 cornerNdc = gl_Position.xy / gl_Position.w;
+        gl_Position.xy = (anchorNdc + (cornerNdc - anchorNdc) * u_gevDeclutter.x) * gl_Position.w;`}
+    }
 }
 `,
   ];
@@ -153,10 +166,12 @@ export function createCyberSonarGpu(scene, readFrame) {
   const uniforms = new Cesium.Cartesian4();
   const viewport = new Cesium.Cartesian2();
   let sector = 24;
+  const declutter = new Cesium.Cartesian3(1, 1, 1);
   const sonarUniforms = {
     u_gevSonar: () => uniforms,
     u_gevSonarViewport: () => viewport,
     u_gevSonarSector: () => sector,
+    u_gevDeclutter: () => declutter,
   };
   const culling = new Cesium.CullingVolume();
   const used = new Set();
@@ -195,6 +210,11 @@ export function createCyberSonarGpu(scene, readFrame) {
     uniforms.z = frame.opacity / 100;
     uniforms.w = frame.active ? 1 : 0;
     sector = frame.sector;
+    // Sonar treatment only in the cyber contact theme; declutter alone keeps
+    // native colours and just scales/dims (1, 1 when declutter is off).
+    declutter.x = Number.isFinite(frame.declutterScale) ? frame.declutterScale : 1;
+    declutter.y = Number.isFinite(frame.declutterAlpha) ? frame.declutterAlpha : 1;
+    declutter.z = frame.sonar === false ? 0 : 1;
     used.clear();
     replaced.length = 0;
     if (frameState.cullingVolume)

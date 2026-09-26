@@ -91,6 +91,7 @@ export class DisplayBindings {
         toggleCctv: () => this._toggleCctvEnabled(),
         zoomIn: () => this._zoomMapIn(),
         zoomOut: () => this._zoomMapOut(),
+        toggleDeclutter: () => this._toggleDeclutter(),
       },
     });
 
