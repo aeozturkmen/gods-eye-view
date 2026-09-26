@@ -1,3 +1,4 @@
+import { budgetedSampleHeight } from '../../services/sampleHeightBudget.js';
 import * as Cesium from 'cesium';
 import {
   DEFAULT_CAPACITY,
@@ -102,7 +103,9 @@ export function createRendering({
     // Sample terrain height so points sit on ground rather than at ellipsoid level
     if (layerState._viewer?.scene?.sampleHeightSupported) {
       const carto = Cesium.Cartographic.fromDegrees(lon, lat);
-      const sampled = layerState._viewer.scene.sampleHeight(carto);
+      // Budgeted: stations are created in bulk; past the per-frame readback
+      // budget they keep the small offset height, as on an unsampled scene.
+      const sampled = budgetedSampleHeight(layerState._viewer.scene, carto);
       if (Number.isFinite(sampled)) {
         height = sampled + POINT_HEIGHT_OFFSET_M;
       }

@@ -1,3 +1,7 @@
+import {
+  budgetedSampleHeight,
+  sampleHeightBudgetAvailable,
+} from '../../services/sampleHeightBudget.js';
 import * as Cesium from 'cesium';
 import {
   MAX_CANVAS_FRUSTUMS,
@@ -55,6 +59,12 @@ export function createAlprOverlay({ state, services }) {
       entity.gevAlprNativeAppearance = null;
       entity.gevAlprPickPosition = null;
     }
+    // paint() calls this for every camera on every frame. Assigning a graphics
+    // property always raises definitionChanged, and a ground-clamped polygon
+    // answers that by re-clamping through Scene.getHeight: a GPU vertex
+    // readback over Google 3D tiles. Write only on a real visibility change.
+    if (entity.gevAlprNativeShown === visible) return;
+    entity.gevAlprNativeShown = visible;
     billboard.show = visible;
     if (entity.polyline) entity.polyline.show = visible;
     if (entity.polygon) entity.polygon.show = visible;
@@ -65,6 +75,8 @@ export function createAlprOverlay({ state, services }) {
       entity.gevAlprCanvasPosition = null;
       entity.gevAlprWedge = null;
       entity.gevAlprDisplayPosition = null;
+      entity.gevAlprSampleRetryAt = 0;
+      entity.gevAlprSampleFails = 0;
       nativeVisible(entity, true);
     }
     state.lastAnchorSampleAt = 0;
@@ -80,11 +92,25 @@ export function createAlprOverlay({ state, services }) {
       record.latitude,
     );
     let height;
-    if (scene.sampleHeightSupported) {
-      try {
-        height = scene.sampleHeight(location, [entity]);
-      } catch {
-        /* streaming tiles */
+    const now = Date.now();
+    if (
+      scene.sampleHeightSupported &&
+      !(entity.gevAlprSampleRetryAt > now)
+    ) {
+      // Each sample is a pick render + blocking GPU readback, and paint runs
+      // every frame for every unresolved camera. Past the shared budget,
+      // defer to a later paint instead of settling for a fallback.
+      if (!sampleHeightBudgetAvailable(scene)) return null;
+      height = budgetedSampleHeight(scene, location, [entity]);
+      if (validAlprGroundHeight(height)) {
+        entity.gevAlprSampleFails = 0;
+      } else {
+        // Tiles under this camera are not streamed yet: back off (0.5 s,
+        // doubling to 30 s) instead of re-sampling it on every frame.
+        const fails = (entity.gevAlprSampleFails || 0) + 1;
+        entity.gevAlprSampleFails = fails;
+        entity.gevAlprSampleRetryAt =
+          now + Math.min(30000, 500 * 2 ** (fails - 1));
       }
     }
     if (!validAlprGroundHeight(height) && scene.globe.show)
@@ -163,7 +189,10 @@ export function createAlprOverlay({ state, services }) {
         origin.y > height + 60
       )
         continue;
-      entity.billboard.show = true;
+      // Faint native pick target under the badge; assign only on change (see
+      // nativeVisible) so a steady frame raises no definitionChanged.
+      if (entity.billboard.show?.getValue?.() !== true)
+        entity.billboard.show = true;
       painted.push({ record, origin, selected, image, alpha });
       if (selected) entity.gevAlprDisplayPosition = anchor;
     }

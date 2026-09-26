@@ -46,6 +46,7 @@
  * are per-layer, keyed by that layer's icao space).
  */
 
+import { budgetedSampleHeight } from './sampleHeightBudget.js';
 import * as Cesium from 'cesium';
 
 /** Taxi threshold: a cached snap answers directly for moves up to this far from
@@ -344,8 +345,10 @@ export function createGroundSnap({ groundFloor }) {
         Cesium.Ellipsoid.WGS84,
         scratchCarto,
       );
-      // sampleHeight throws when unsupported (no depth textures) — that's a miss.
-      sampled = viewer.scene.sampleHeight(
+      // sampleHeight throws when unsupported (no depth textures) — that's a
+      // miss. Past the shared readback budget it is deferred: also a miss.
+      sampled = budgetedSampleHeight(
+        viewer.scene,
         carto,
         getExclusions ? getExclusions() : undefined,
       );

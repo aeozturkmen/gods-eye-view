@@ -8,6 +8,7 @@
     "modules": [
       "src/data/infrastructure.js",
       "src/data/localGeojsonCore.js",
+      "src/services/sampleHeightBudget.js",
       "src/data/localGeojsonLod.js",
       "src/data/inputOwnership.js"
     ],
@@ -1051,6 +1052,7 @@
       "src/layers/bikeshare/queries.js",
       "src/layers/bikeshare/registry.js",
       "src/layers/bikeshare/rendering.js",
+      "src/services/sampleHeightBudget.js",
       "src/layers/bikeshare/selection.js",
       "src/layers/bikeshare/source.js",
       "src/layers/bikeshare/state.js",
@@ -1111,6 +1113,7 @@
       "src/layers/alpr/presentation.js",
       "src/layers/alpr/visuals.js",
       "src/layers/alpr/overlay.js",
+      "src/services/sampleHeightBudget.js",
       "src/layers/alpr/source.js",
       "src/data/inputOwnership.js",
       "src/layers/alpr/records.js"
@@ -1395,6 +1398,7 @@
       "src/data/lifecycle.js",
       "src/data/localGeojson.js",
       "src/data/localGeojsonCore.js",
+      "src/services/sampleHeightBudget.js",
       "src/data/localGeojsonLod.js",
       "src/data/localLayers.js",
       "src/data/local_data/natural_earth/marine.json",
@@ -2059,6 +2063,7 @@
       "src/data/layerState.js",
       "src/data/localGeojson.js",
       "src/data/localGeojsonCore.js",
+      "src/services/sampleHeightBudget.js",
       "src/data/localGeojsonLod.js",
       "src/data/local_data/natural_earth/marine.json",
       "src/data/local_data/natural_earth/regions.json",
@@ -2440,6 +2445,7 @@
   "application-operations": {
     "exports": ["./application/operations"],
     "modules": [
+      "src/services/sampleHeightBudget.js",
       "src/annotations/annotationResolver.js",
       "src/annotations/resolver.js",
       "src/app/operations.js",
@@ -2802,6 +2808,7 @@
   "transit-standalone": {
     "exports": ["./layers/transit/standalone"],
     "modules": [
+      "src/services/sampleHeightBudget.js",
       "src/cyberSonar.js",
       "src/app/sourceSlot.js",
       "src/celestialRing.js",

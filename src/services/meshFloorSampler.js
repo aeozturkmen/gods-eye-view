@@ -1,3 +1,7 @@
+import {
+  budgetedSampleHeight,
+  sampleHeightBudgetAvailable,
+} from './sampleHeightBudget.js';
 import * as Cesium from 'cesium';
 
 /** Construct an instance-owned meshFloorSampler service with explicit dependencies. */
@@ -137,6 +141,8 @@ export function createMeshFloorSampler({
       ) {
         continue; // too far: tiles not streamed there, probe would be a guaranteed miss
       }
+      // Shared readback budget spent: stop this poll; the rest wait for the next.
+      if (!sampleHeightBudgetAvailable(scene)) break;
       let height;
       try {
         const carto = Cesium.Cartographic.fromDegrees(
@@ -145,7 +151,7 @@ export function createMeshFloorSampler({
           0,
           _scratchProbe,
         );
-        height = scene.sampleHeight(carto, excludeObjects);
+        height = budgetedSampleHeight(scene, carto, excludeObjects);
         sampled += 1;
       } catch {
         continue; // scene mid-teardown — try again next poll

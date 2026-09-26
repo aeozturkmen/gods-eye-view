@@ -130,6 +130,13 @@ export function createRendering({ state }) {
   }
 
   function styleLandingEntity(entity, feature) {
+    // GeoJsonDataSource({clampToGround}) gives each landing pin
+    // CLAMP_TO_GROUND, which on the Google 3D stack re-runs a tile-mesh vertex
+    // readback (Scene.getHeight -> Model.pick) for every pin under each tile
+    // that streams in: ~1,900 worldwide pins froze the frame. Landing points
+    // are coastal, so terrain (or sea level when the globe is hidden) suffices.
+    if (entity?.billboard)
+      entity.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_TERRAIN;
     if (!entity?.point) return;
     entity.point.color = state.landingColor.withAlpha(0.92);
     entity.point.pixelSize = feature?.properties?.is_tbd ? 6 : 7;

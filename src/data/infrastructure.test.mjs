@@ -186,6 +186,8 @@ test('consumer build includes only infrastructure code and resolves assets under
     'infrastructure.js',
     'localGeojsonCore.js',
     'localGeojsonLod.js',
+    // Shared per-frame sampleHeight budget (no Cesium or DOM dependency).
+    'sampleHeightBudget.js',
   ]);
   assert.deepEqual(
     entry.imports,

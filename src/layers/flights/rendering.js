@@ -480,6 +480,12 @@ export function createRendering({
     try {
       const spec = _modelSpec(flightState.records.data.get(icao24)?.klass);
       model = await Cesium.Model.fromGltfAsync({
+        environmentMapOptions: {
+          // Proximity aircraft models are created and dropped constantly
+          // (~280 in 45 s over a busy city); each new model's dynamic
+          // lighting map costs a blocking GPU readback. Use static lighting.
+          enabled: false,
+        },
         url: resolveAsset(spec.url),
         asynchronous: false,
         minimumPixelSize: MODEL_MIN_PX,
@@ -686,6 +692,12 @@ export function createRendering({
       );
       const trackedIrBoost = flightState._irBoost;
       Cesium.Model.fromGltfAsync({
+        environmentMapOptions: {
+          // Proximity aircraft models are created and dropped constantly
+          // (~280 in 45 s over a busy city); each new model's dynamic
+          // lighting map costs a blocking GPU readback. Use static lighting.
+          enabled: false,
+        },
         url: resolveAsset(trackedSpec.url),
         asynchronous: false,
         minimumPixelSize: TRACKED_MODEL_MIN_PX,

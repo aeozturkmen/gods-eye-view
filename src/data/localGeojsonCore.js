@@ -1,3 +1,7 @@
+import {
+  budgetedSampleHeight,
+  sampleHeightBudgetAvailable,
+} from '../services/sampleHeightBudget.js';
 import * as Cesium from 'cesium';
 import { isPointerFree } from './inputOwnership.js';
 import {
@@ -815,6 +819,11 @@ export function createLocalGeoJsonLayer(
                   // globe-horizon culling is handled by the pre-render occluder.
                   disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 });
+                // The stem + point replace GeoJsonDataSource's pin. Left in
+                // place, that CLAMP_TO_GROUND billboard made Cesium re-run a
+                // Google 3D tile-mesh readback for every feature on each tile
+                // load (hundreds of datacenters -> seconds per frame).
+                feature.billboard = undefined;
 
                 const priority = labelPriorityFromProperties(properties, id);
                 _stemRecords.push({
@@ -1220,15 +1229,16 @@ function refreshLocalTerrainFloor(viewer, record) {
 function sampleLocalGroundHeight(viewer, record, now) {
   if (record.groundSampled || !viewer.scene.sampleHeightSupported) return false;
   if (now - record.lastGroundSampleMs < GROUND_SAMPLE_RETRY_MS) return false;
+  // Shared per-frame readback budget: a walk over hundreds of datacenters or
+  // dams must not issue hundreds of blocking pick renders in one frame. A
+  // deferred record keeps its retry slot and tries again next frame.
+  if (!sampleHeightBudgetAvailable(viewer.scene)) return false;
   record.lastGroundSampleMs = now;
   const globe = viewer.scene.globe;
   if (globe?.show && globe.tilesLoaded === false) return false;
-  let sampled;
-  try {
-    sampled = viewer.scene.sampleHeight(record.carto, [record.entity]);
-  } catch {
-    return false; // tiles not ready; retry on a later bounded update
-  }
+  let sampled = budgetedSampleHeight(viewer.scene, record.carto, [
+    record.entity,
+  ]);
   if (
     !Number.isFinite(sampled) ||
     Math.abs(sampled) > GROUND_SAMPLE_MAX_ABS_HEIGHT_M

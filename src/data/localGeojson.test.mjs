@@ -473,6 +473,19 @@ test('a real enabled local layer has no native label graphics at runtime', async
   env.cleanup();
 });
 
+test('point features keep no ground-clamped GeoJSON pin next to their stem', async () => {
+  const env = await createRealLocalLayerHarness();
+  const points = env.dataSources[0].entities.values.filter((entity) => entity.point);
+  assert.ok(points.length > 0, 'guard requires stemmed point features');
+  // GeoJsonDataSource({clampToGround}) gives every point a CLAMP_TO_GROUND
+  // billboard. The stem and PointGraphics replace it; a leftover clamped pin
+  // makes Cesium re-run Scene.getHeight (a GPU vertex readback over Google 3D
+  // tiles) for every point whenever a tile under it loads.
+  assert.ok(points.every((entity) => entity.billboard === undefined));
+  env.layer.destroy(env.viewer);
+  env.cleanup();
+});
+
 for (const [heightM, minStemM, maxStemM] of [[500, 45, 90], [10000, 1100, 1400]]) {
   test(`local infrastructure keeps stems proportional at ${heightM} m`, async (t) => {
     const env = await createRealLocalLayerHarness();

@@ -41,7 +41,12 @@ export function createLocalAdsbModels({
   color,
   resolveAsset,
   groundSnap = null,
-  loadModel = (options) => Cesium.Model.fromGltfAsync(options),
+  loadModel = (options) =>
+    Cesium.Model.fromGltfAsync({
+      // See flights/rendering.js: no per-model dynamic lighting readbacks.
+      environmentMapOptions: { enabled: false },
+      ...options,
+    }),
 }) {
   const collection = new Cesium.PrimitiveCollection();
   viewer.scene.primitives.add(collection);

@@ -199,3 +199,38 @@ test('adapter labels never claim a custom source is public OSM data', () => {
     ['Source: Custom directory', 'VENDOR'],
   );
 });
+
+test('steady repaints never rewrite native ALPR geometry (each rewrite re-clamps to 3D tiles)', (t) => {
+  const h = harness(t, 3);
+  h.overlay.sync(h.records);
+  h.paint();
+  let changes = 0;
+  for (const entity of h.entities.values) {
+    for (const graphics of [entity.polygon, entity.polyline, entity.billboard])
+      graphics.definitionChanged.addEventListener(() => {
+        changes += 1;
+      });
+  }
+  for (let i = 0; i < 5; i++) h.paint();
+  // A ground-clamped polygon re-runs Scene.getHeight (a GPU vertex readback
+  // over Google 3D tiles) on every definition change; unchanged visibility
+  // must therefore not be re-assigned on every frame.
+  assert.equal(changes, 0);
+});
+
+test('a camera whose ground sample keeps failing backs off instead of re-sampling every frame', (t) => {
+  const h = harness(t, 1);
+  let samples = 0;
+  const scene = h.state.viewer.scene;
+  scene.sampleHeightSupported = true;
+  scene.sampleHeight = () => {
+    samples += 1;
+    return undefined; // Google 3D tile under this camera not streamed yet
+  };
+  scene.globe.show = false; // photoreal stack: no globe fallback
+  h.overlay.sync(h.records);
+  for (let i = 0; i < 20; i++) h.paint();
+  // Each sample is a pick render + blocking GPU readback; 20 frames must not
+  // cost 20 readbacks for the same unresolvable camera.
+  assert.equal(samples, 1);
+});
