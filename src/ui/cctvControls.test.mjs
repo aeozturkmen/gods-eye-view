@@ -218,3 +218,13 @@ test('disposing during camera enable prevents the delayed focus and future click
   assert.equal(enables, 1);
   assert.equal(focuses, 0);
 });
+
+test('camera list change detection compares ids, not DOM options', async () => {
+  const { cameraOptionsChanged } = await import('./cctvPresentation.js');
+  const cams = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.equal(cameraOptionsChanged(null, cams), true);
+  assert.equal(cameraOptionsChanged(['a', 'b', 'c'], cams), false);
+  assert.equal(cameraOptionsChanged(['a', 'b'], cams), true);
+  assert.equal(cameraOptionsChanged(['a', 'x', 'c'], cams), true);
+  assert.equal(cameraOptionsChanged([], []), false);
+});

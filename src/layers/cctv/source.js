@@ -7,12 +7,34 @@ function safeNumber(value, fallback = NaN) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
+/**
+ * Last URL built per camera object. The CCTV UI state maps EVERY camera
+ * through frameUrlFor on each loading-progress notification (~every 300 ms
+ * for the whole multi-minute geometry drain), so re-encoding thousands of
+ * query strings per notification dominated the main thread. Reuse the string
+ * while every input is unchanged; any pose/label change or new tick rebuilds.
+ */
+const frameUrlCache = new WeakMap();
 function frameUrlFor(camera, refreshMs = ACTIVE_FRAME_REFRESH_MS) {
   const cadenceMs = Math.max(
     1000,
     safeNumber(refreshMs, ACTIVE_FRAME_REFRESH_MS),
   );
   const tick = Math.floor(Date.now() / cadenceMs);
+  const cached = frameUrlCache.get(camera);
+  if (
+    cached &&
+    cached.tick === tick &&
+    cached.id === camera.id &&
+    cached.name === camera.name &&
+    cached.city === camera.city &&
+    cached.lat === camera.lat &&
+    cached.lon === camera.lon &&
+    cached.headingDeg === camera.headingDeg &&
+    cached.fovDeg === camera.fovDeg &&
+    cached.pitchDeg === camera.pitchDeg
+  )
+    return cached.url;
   const params = new URLSearchParams({
     label: camera.name,
     city: camera.city,
@@ -23,7 +45,21 @@ function frameUrlFor(camera, refreshMs = ACTIVE_FRAME_REFRESH_MS) {
     pitch: String(Math.round(camera.pitchDeg || -10)),
     ts: String(tick),
   });
-  return `${FRAME_ENDPOINT}/${encodeURIComponent(camera.id)}?${params.toString()}`;
+  const url = `${FRAME_ENDPOINT}/${encodeURIComponent(camera.id)}?${params.toString()}`;
+  if (camera && typeof camera === 'object')
+    frameUrlCache.set(camera, {
+      tick,
+      id: camera.id,
+      name: camera.name,
+      city: camera.city,
+      lat: camera.lat,
+      lon: camera.lon,
+      headingDeg: camera.headingDeg,
+      fovDeg: camera.fovDeg,
+      pitchDeg: camera.pitchDeg,
+      url,
+    });
+  return url;
 }
 function mediaUrlFor(camera) {
   return `${MEDIA_ENDPOINT}/${encodeURIComponent(camera.id)}?ts=${Math.floor(Date.now() / 15000)}`;

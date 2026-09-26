@@ -55,19 +55,23 @@ export function _renderCctvState(state) {
   }
 
   if (this._cctvSelect) {
+    // Compare against the ids last rendered (a plain array), not the DOM
+    // options: this runs on every CCTV loading notification, and indexing
+    // thousands of HTMLOptionElements each time was a measurable main-thread cost.
     const shouldRebuild =
       this._cctvSelect.options.length !== cameras.length ||
-      cameras.some(
-        (cam, idx) => this._cctvSelect.options[idx]?.value !== cam.id,
-      );
+      cameraOptionsChanged(this._cctvOptionIds, cameras);
     if (shouldRebuild) {
       this._cctvSelect.innerHTML = '';
+      const fragment = document.createDocumentFragment();
       for (const camera of cameras) {
         const option = document.createElement('option');
         option.value = camera.id;
         option.textContent = `${camera.city} · ${camera.name}`;
-        this._cctvSelect.appendChild(option);
+        fragment.appendChild(option);
       }
+      this._cctvSelect.appendChild(fragment);
+      this._cctvOptionIds = cameras.map((camera) => camera.id);
     }
     this._cctvSelect.disabled = !enabled || cameras.length === 0;
     if (
@@ -276,4 +280,18 @@ export function _updateCctvSyncChip(loading, enabled) {
     this._cctvChipWasBusy = false;
     this._cctvSyncChip.classList.remove('visible');
   }
+}
+
+/**
+ * Whether the rendered camera option ids differ from the camera list.
+ * @param {string[]|null|undefined} renderedIds Ids of the options last built.
+ * @param {{id: string}[]} cameras Current camera list.
+ * @returns {boolean}
+ */
+export function cameraOptionsChanged(renderedIds, cameras) {
+  if (!Array.isArray(renderedIds) || renderedIds.length !== cameras.length)
+    return true;
+  for (let i = 0; i < cameras.length; i++)
+    if (renderedIds[i] !== cameras[i].id) return true;
+  return false;
 }

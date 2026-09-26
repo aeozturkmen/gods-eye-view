@@ -88,6 +88,39 @@ test('frame and media URLs preserve registered camera identity and encoded metad
   assert.deepEqual([...media.searchParams.keys()], ['ts']);
 });
 
+test('frame URLs are memoized per camera and tick, yet follow every pose change', () => {
+  const source = createCctvSource();
+  const Original = globalThis.URLSearchParams;
+  let built = 0;
+  globalThis.URLSearchParams = class extends Original {
+    constructor(...args) {
+      super(...args);
+      built += 1;
+    }
+  };
+  try {
+    const cam = { ...camera };
+    const first = source.getFrameUrl(cam);
+    // uiState rebuilds the camera list on every loading notification: the
+    // same camera in the same refresh tick must not re-encode its query.
+    assert.equal(source.getFrameUrl(cam), first);
+    assert.equal(built, 1);
+    cam.headingDeg = 90;
+    const turned = new URL(source.getFrameUrl(cam), 'https://example.test');
+    assert.equal(turned.searchParams.get('heading'), '90');
+    assert.equal(built, 2);
+    cam.name = 'Renamed';
+    assert.equal(
+      new URL(source.getFrameUrl(cam), 'https://example.test').searchParams.get('label'),
+      'Renamed',
+    );
+    // A different refresh cadence is a different tick bucket.
+    assert.notEqual(source.getFrameUrl(cam, 60_000), source.getFrameUrl(cam));
+  } finally {
+    globalThis.URLSearchParams = Original;
+  }
+});
+
 test('camera construction is inert and destruction cancels a pending catalog and its visibility listener', async (t) => {
   const original = globalThis.document;
   const listeners = new Set();
