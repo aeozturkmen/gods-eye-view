@@ -196,6 +196,50 @@ export const DATA_CREDITS = [
       'license CC BY 4.0',
   },
   {
+    key: 'dgt-cctv',
+    html:
+      'Traffic cameras (Spain): Fuente: ' +
+      '<a href="https://nap.dgt.es/" target="_blank" rel="noopener">Dirección General de Tráfico (DGT)</a>, CC BY',
+  },
+  {
+    key: 'madrid-cctv',
+    html:
+      'Traffic cameras (Madrid): Ayuntamiento de Madrid – ' +
+      '<a href="https://datos.madrid.es/" target="_blank" rel="noopener">datos.madrid.es</a> ' +
+      '(CC BY 4.0), incl. Madrid Calle 30',
+  },
+  {
+    key: 'vegvesen-cctv',
+    html:
+      'Traffic cameras (Norway): inneholder data under Norsk lisens for offentlige data ' +
+      '(<a href="https://data.norge.no/nlod/no/2.0" target="_blank" rel="noopener">NLOD</a>) ' +
+      'tilgjengeliggjort av Statens vegvesen',
+  },
+  {
+    key: 'vegagerdin-cctv',
+    html:
+      'Road cameras (Iceland): based on data from ' +
+      '<a href="https://www.vegagerdin.is/" target="_blank" rel="noopener">Vegagerðin</a>',
+  },
+  {
+    key: 'cita-cctv',
+    html:
+      'Motorway cameras (Luxembourg): CITA via ' +
+      '<a href="https://data.public.lu/" target="_blank" rel="noopener">data.public.lu</a> (CC0)',
+  },
+  {
+    key: 'ibb-cctv',
+    html:
+      'Traffic cameras (İstanbul): İBB Ulaşım Yönetim Merkezi ' +
+      '(<a href="https://uym.ibb.gov.tr/" target="_blank" rel="noopener">uym.ibb.gov.tr</a>), live streams, personal viewing',
+  },
+  {
+    key: 'izum-cctv',
+    html:
+      'Traffic cameras (İzmir): İZUM; camera list from İzmir Büyükşehir Belediyesi ' +
+      '<a href="https://acikveri.bizizmir.com/" target="_blank" rel="noopener">Açık Veri Portalı</a> (CC BY 4.0)',
+  },
+  {
     key: 'calgary-cctv',
     html:
       'Traffic cameras (Calgary): contains information licensed under the ' +

@@ -9,6 +9,10 @@ import {
   NSW_IMAGE_ORIGIN,
   NSW_IMAGE_USER_AGENT,
 } from './constants.js';
+import {
+  IZUM_MJPEG_ORIGIN,
+  MJPEG_STILL_MAX_BYTES,
+} from './regionalConstants.js';
 /**
  * Generate a synthetic SVG billboard image for a CCTV camera placeholder.
  *
@@ -505,6 +509,51 @@ export function cctvUpstreamUserAgent(url) {
 }
 
 /**
+ * Hosts whose registered frame URL is a live MJPEG stream
+ * (multipart/x-mixed-replace). Only these may answer a still request with a
+ * stream; the proxy keeps the first complete JPEG part and disconnects.
+ */
+const MJPEG_STILL_HOSTS = new Set([new URL(IZUM_MJPEG_ORIGIN).hostname]);
+
+/**
+ * Read the first complete JPEG (SOI 0xFFD8 … EOI 0xFFD9) from an MJPEG
+ * response, never buffering more than `maxBytes`, then cancel the stream.
+ *
+ * @param {Response} upstream
+ * @param {number} maxBytes
+ * @returns {Promise<Buffer|null>}
+ */
+export async function readFirstMjpegFrame(upstream, maxBytes) {
+  const reader = upstream.body?.getReader?.();
+  if (!reader) return null;
+  const chunks = [];
+  let total = 0;
+  let buffer = Buffer.alloc(0);
+  try {
+    while (total < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(Buffer.from(value));
+      total += value.byteLength;
+      buffer = Buffer.concat(chunks, total);
+      const start = buffer.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+      if (start < 0) continue;
+      const end = buffer.indexOf(Buffer.from([0xff, 0xd9]), start + 3);
+      if (end >= 0) return buffer.subarray(start, end + 2);
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      /* no-op */
+    }
+  }
+}
+
+/**
  * Fetch one upstream CCTV image within the frame-refresh budget.
  *
  * A timeout is treated like every other upstream miss so the caller can
@@ -544,6 +593,17 @@ export async function fetchCctvImageFromUpstream(
     );
     if (!upstream) return null;
     const contentType = upstream.headers.get('content-type') || '';
+    if (
+      upstream.ok &&
+      contentType.startsWith('multipart/x-mixed-replace') &&
+      MJPEG_STILL_HOSTS.has(new URL(url).hostname)
+    ) {
+      const frame = await readFirstMjpegFrame(
+        upstream,
+        Math.min(maxBytes, MJPEG_STILL_MAX_BYTES),
+      );
+      return frame ? { ok: true, body: frame, contentType: 'image/jpeg' } : null;
+    }
     if (!upstream.ok || !contentType.startsWith('image/')) {
       controller.abort();
       return null;

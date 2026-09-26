@@ -19,6 +19,17 @@ import {
   loadCalgarySourcesFromOpenData,
   loadDelDOTSourcesFromOpenData,
 } from './sources.js';
+import {
+  loadDgtSourcesFromNap,
+  loadMadridSourcesFromOpenData,
+  loadNorwaySourcesFromWfs,
+  loadIcelandSourcesFromOpenData,
+  loadCitaSourcesFromKml,
+} from './sourcesEurope.js';
+import {
+  loadIbbSourcesFromUym,
+  loadIzumSourcesFromOpenData,
+} from './sourcesTurkey.js';
 
 /** Env kill switch: unset or anything but "0" means enabled. */
 const envEnabled = (name) => String(process.env[name] || '1').trim() !== '0';
@@ -91,6 +102,42 @@ const LIVE_PACKS = [
     name: 'deldot',
     enabled: () => envEnabled('CCTV_DELDOT_ENABLED'),
     load: loadDelDOTSourcesFromOpenData,
+  },
+  // Europe (sourcesEurope.js) and Turkey (sourcesTurkey.js).
+  {
+    name: 'dgt',
+    enabled: () => envEnabled('CCTV_DGT_ENABLED'),
+    load: loadDgtSourcesFromNap,
+  },
+  {
+    name: 'madrid',
+    enabled: () => envEnabled('CCTV_MADRID_ENABLED'),
+    load: loadMadridSourcesFromOpenData,
+  },
+  {
+    name: 'norway',
+    enabled: () => envEnabled('CCTV_NORWAY_ENABLED'),
+    load: loadNorwaySourcesFromWfs,
+  },
+  {
+    name: 'iceland',
+    enabled: () => envEnabled('CCTV_ICELAND_ENABLED'),
+    load: loadIcelandSourcesFromOpenData,
+  },
+  {
+    name: 'cita',
+    enabled: () => envEnabled('CCTV_CITA_ENABLED'),
+    load: loadCitaSourcesFromKml,
+  },
+  {
+    name: 'ibb',
+    enabled: () => envEnabled('CCTV_IBB_ENABLED'),
+    load: loadIbbSourcesFromUym,
+  },
+  {
+    name: 'izum',
+    enabled: () => envEnabled('CCTV_IZUM_ENABLED'),
+    load: loadIzumSourcesFromOpenData,
   },
 ];
 /**
