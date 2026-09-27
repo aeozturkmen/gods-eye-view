@@ -1,3 +1,5 @@
+> **Fork note:** this fork adds Europe + Turkey CCTV packs (DGT Spain, Madrid, Norway, Iceland, Luxembourg, İstanbul, İzmir), a bottom-left zoom control, a "quiet map" declutter toggle, a hardened local launcher (`./gev.sh`), and fixes for the CCTV loading stall and the black screen / single-digit FPS on Google Photorealistic 3D. Details, measurements and trade-offs: **[docs/FORK-NOTES.md](docs/FORK-NOTES.md)**.
+
 <div align="center">
 
 # 🌐 God's Eye View
