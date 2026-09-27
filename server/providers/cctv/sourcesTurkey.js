@@ -47,7 +47,9 @@ export function parseIbbCameras(rows) {
       stream.username ||
       stream.password ||
       stream.search ||
-      !/^\/tkm\d{1,2}\/hls\/\d{1,6}\.stream\/playlist\.m3u8$/.test(stream.pathname)
+      !/^\/tkm\d{1,2}\/hls\/\d{1,6}\.stream\/playlist\.m3u8$/.test(
+        stream.pathname,
+      )
     )
       return;
     // Coordinates arrive as strings, X = longitude, Y = latitude.
@@ -65,7 +67,8 @@ export function parseIbbCameras(rows) {
         lon,
         url: `${IBB_HLS_ORIGIN}${stream.pathname}`,
         sourceKind: 'ibb-uym',
-        license: 'İBB Ulaşım Yönetim Merkezi (public stream, no stated reuse licence)',
+        license:
+          'İBB Ulaşım Yönetim Merkezi (public stream, no stated reuse licence)',
         groundElevationM: 60,
         feedType: 'hls',
       }),
@@ -115,9 +118,10 @@ export function parseIzumCameras(rows) {
     } catch {
       continue;
     }
-    const uuid = /^\/mjpeg\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
-      stream.pathname,
-    )?.[1];
+    const uuid =
+      /^\/mjpeg\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
+        stream.pathname,
+      )?.[1];
     if (stream.origin !== IZUM_MJPEG_ORIGIN || stream.search || !uuid) continue;
     const lat = toFiniteNumber(row?.lat);
     const lon = toFiniteNumber(row?.lng);

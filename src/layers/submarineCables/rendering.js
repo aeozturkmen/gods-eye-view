@@ -136,7 +136,8 @@ export function createRendering({ state }) {
     // that streams in: ~1,900 worldwide pins froze the frame. Landing points
     // are coastal, so terrain (or sea level when the globe is hidden) suffices.
     if (entity?.billboard)
-      entity.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_TERRAIN;
+      entity.billboard.heightReference =
+        Cesium.HeightReference.CLAMP_TO_TERRAIN;
     if (!entity?.point) return;
     entity.point.color = state.landingColor.withAlpha(0.92);
     entity.point.pixelSize = feature?.properties?.is_tbd ? 6 : 7;

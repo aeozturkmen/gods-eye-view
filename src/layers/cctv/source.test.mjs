@@ -111,7 +111,9 @@ test('frame URLs are memoized per camera and tick, yet follow every pose change'
     assert.equal(built, 2);
     cam.name = 'Renamed';
     assert.equal(
-      new URL(source.getFrameUrl(cam), 'https://example.test').searchParams.get('label'),
+      new URL(source.getFrameUrl(cam), 'https://example.test').searchParams.get(
+        'label',
+      ),
       'Renamed',
     );
     // A different refresh cadence is a different tick bucket.

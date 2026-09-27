@@ -85,7 +85,8 @@ export function xmlBlocks(xml, tag) {
   );
   const blocks = [];
   let match;
-  while ((match = pattern.exec(xml))) blocks.push({ attrs: match[1], body: match[2] });
+  while ((match = pattern.exec(xml)))
+    blocks.push({ attrs: match[1], body: match[2] });
   return blocks;
 }
 
@@ -160,7 +161,10 @@ export function inBox(lat, lon, [south, west, north, east]) {
 }
 
 /** Env kill switch, cap parse, dedupe, anchor-prioritize and log, in one place. */
-export function finishPack(cameras, { label, maxEnv, defaultMax, ceiling, anchors }) {
+export function finishPack(
+  cameras,
+  { label, maxEnv, defaultMax, ceiling, anchors },
+) {
   const unique = Array.from(
     new Map(cameras.map((camera) => [camera.id, camera])).values(),
   );

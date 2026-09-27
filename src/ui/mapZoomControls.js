@@ -121,7 +121,9 @@ export function bindMapZoomControls({ viewer, elements, runNavigation }) {
         !isPickedWorldPosition(target) ||
         !setCameraTargetFrame(viewer, {
           ...frame,
-          ...(current ? { heading: current.heading, pitch: current.pitch } : {}),
+          ...(current
+            ? { heading: current.heading, pitch: current.pitch }
+            : {}),
           target,
           range: Math.exp(Cesium.Math.lerp(fromLog, toLog, eased)),
         })
@@ -159,7 +161,8 @@ export function bindMapZoomControls({ viewer, elements, runNavigation }) {
       const camera = viewer?.camera;
       if (!camera || !height) return false;
       const amount = height * Math.abs(1 - factor);
-      if (factor < 1) camera.zoomIn(Math.min(amount, height - MIN_FREE_RANGE_M));
+      if (factor < 1)
+        camera.zoomIn(Math.min(amount, height - MIN_FREE_RANGE_M));
       else camera.zoomOut(amount);
       viewer.scene?.requestRender?.();
       return true;

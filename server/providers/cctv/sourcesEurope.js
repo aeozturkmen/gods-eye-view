@@ -52,7 +52,10 @@ export function parseDgtDevices(xml) {
   for (const { attrs, body } of xmlBlocks(xml, 'device')) {
     const id = /\bid="(\d{1,9})"/.exec(attrs)?.[1];
     if (!id) continue;
-    if (xmlTag(body, 'typeOfDevice') && xmlTag(body, 'typeOfDevice') !== 'camera')
+    if (
+      xmlTag(body, 'typeOfDevice') &&
+      xmlTag(body, 'typeOfDevice') !== 'camera'
+    )
       continue;
     const lat = toFiniteNumber(xmlTag(body, 'latitude'));
     const lon = toFiniteNumber(xmlTag(body, 'longitude'));
@@ -109,9 +112,13 @@ export async function loadDgtSourcesFromNap() {
 export function parseMadridKml(kml) {
   const cameras = [];
   for (const { body } of xmlBlocks(kml, 'Placemark')) {
-    const numero = /<Data name="Numero">\s*<Value>([^<]*)<\/Value>/.exec(body)?.[1]?.trim();
+    const numero = /<Data name="Numero">\s*<Value>([^<]*)<\/Value>/
+      .exec(body)?.[1]
+      ?.trim();
     if (!numero || !/^\d{3,6}$/.test(numero)) continue;
-    const nombre = /<Data name="Nombre">\s*<Value>([^<]*)<\/Value>/.exec(body)?.[1];
+    const nombre = /<Data name="Nombre">\s*<Value>([^<]*)<\/Value>/.exec(
+      body,
+    )?.[1];
     const coords = xmlTag(body, 'coordinates').split(',');
     const lon = toFiniteNumber(coords[0]);
     const lat = toFiniteNumber(coords[1]);
@@ -146,8 +153,13 @@ export function parseMadridM30Xml(xml) {
     if (!inBox(lat, lon, MADRID_BOX)) continue;
     cameras.push(
       stillImageCamera({
-        id: `es-m30-${nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`,
-        name: nombre.startsWith('M30-') ? nombre.replace(/^M30-/, 'M-30 ') : `M-30 ${nombre}`,
+        id: `es-m30-${nombre
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')}`,
+        name: nombre.startsWith('M30-')
+          ? nombre.replace(/^M30-/, 'M-30 ')
+          : `M-30 ${nombre}`,
         city: 'Madrid',
         cityId: 'madrid',
         provider: 'Madrid Calle 30',
@@ -209,7 +221,11 @@ export function parseNorwayFeatures(payload) {
     const road = String(props.ROAD_NUMBER || '').trim();
     const orientation = String(props.ORIENTATION_DESCRIPTION || '').trim();
     const name =
-      [road, description, orientation && orientation !== 'ukjent' ? `(${orientation})` : '']
+      [
+        road,
+        description,
+        orientation && orientation !== 'ukjent' ? `(${orientation})` : '',
+      ]
         .filter(Boolean)
         .join(' ') || `Vegvesen ${cameraIdRaw}`;
     cameras.push(

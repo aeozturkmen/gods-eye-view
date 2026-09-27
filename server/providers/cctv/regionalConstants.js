@@ -40,7 +40,8 @@ export const MADRID_CENTER = [{ lat: 40.4168, lon: -3.7038 }];
 // ── Norway: Statens vegvesen public WFS (NLOD) ─────────────────────────
 export const NORWAY_CCTV_WFS_URL =
   'https://ogckart-sn1.atlas.vegvesen.no/datex_3_1/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=datex_3_1:CctvSimple_v2&outputFormat=application/json&srsName=EPSG:4326';
-export const NORWAY_IMAGE_ORIGIN = 'https://kamera.atlas.vegvesen.no/api/images/';
+export const NORWAY_IMAGE_ORIGIN =
+  'https://kamera.atlas.vegvesen.no/api/images/';
 export const DEFAULT_NORWAY_MAX_SOURCES = 100;
 export const NORWAY_ANCHORS = [
   { lat: 59.9139, lon: 10.7522 }, // Oslo
@@ -81,7 +82,8 @@ export const ISTANBUL_ANCHORS = [
 ];
 
 // ── İzmir: İZUM (İzmir Ulaşım Merkezi) MJPEG cameras ───────────────────
-export const IZUM_CAMERAS_URL = 'https://izum.izmir.bel.tr/v1/workspaces/cameras';
+export const IZUM_CAMERAS_URL =
+  'https://izum.izmir.bel.tr/v1/workspaces/cameras';
 export const IZUM_MJPEG_ORIGIN = 'https://izum-cams.izmir.bel.tr';
 export const DEFAULT_IZUM_MAX_SOURCES = 120;
 export const IZMIR_CENTER = [{ lat: 38.4237, lon: 27.1428 }];

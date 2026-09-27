@@ -93,10 +93,7 @@ export function createAlprOverlay({ state, services }) {
     );
     let height;
     const now = Date.now();
-    if (
-      scene.sampleHeightSupported &&
-      !(entity.gevAlprSampleRetryAt > now)
-    ) {
+    if (scene.sampleHeightSupported && !(entity.gevAlprSampleRetryAt > now)) {
       // Each sample is a pick render + blocking GPU readback, and paint runs
       // every frame for every unresolved camera. Past the shared budget,
       // defer to a later paint instead of settling for a fallback.

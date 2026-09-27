@@ -602,7 +602,9 @@ export async function fetchCctvImageFromUpstream(
         upstream,
         Math.min(maxBytes, MJPEG_STILL_MAX_BYTES),
       );
-      return frame ? { ok: true, body: frame, contentType: 'image/jpeg' } : null;
+      return frame
+        ? { ok: true, body: frame, contentType: 'image/jpeg' }
+        : null;
     }
     if (!upstream.ok || !contentType.startsWith('image/')) {
       controller.abort();

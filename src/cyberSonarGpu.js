@@ -116,11 +116,15 @@ void main() {
     v_color.a *= u_gevDeclutter.y;
     ${kind === 'point' ? 'v_outlineColor.a *= u_gevDeclutter.y;' : '#ifdef SDF\n    v_outlineColor.a *= u_gevDeclutter.y;\n    #endif'}
     if (u_gevDeclutter.x < 0.9999) {
-        ${kind === 'point' ? 'gl_PointSize *= u_gevDeclutter.x;' : `// Scale each quad/glyph about its contact anchor in NDC, so a label
+        ${
+          kind === 'point'
+            ? 'gl_PointSize *= u_gevDeclutter.x;'
+            : `// Scale each quad/glyph about its contact anchor in NDC, so a label
         // shrinks as one piece and stays attached to its marker.
         vec2 anchorNdc = anchor.xy / anchor.w;
         vec2 cornerNdc = gl_Position.xy / gl_Position.w;
-        gl_Position.xy = (anchorNdc + (cornerNdc - anchorNdc) * u_gevDeclutter.x) * gl_Position.w;`}
+        gl_Position.xy = (anchorNdc + (cornerNdc - anchorNdc) * u_gevDeclutter.x) * gl_Position.w;`
+        }
     }
 }
 `,
@@ -212,8 +216,12 @@ export function createCyberSonarGpu(scene, readFrame) {
     sector = frame.sector;
     // Sonar treatment only in the cyber contact theme; declutter alone keeps
     // native colours and just scales/dims (1, 1 when declutter is off).
-    declutter.x = Number.isFinite(frame.declutterScale) ? frame.declutterScale : 1;
-    declutter.y = Number.isFinite(frame.declutterAlpha) ? frame.declutterAlpha : 1;
+    declutter.x = Number.isFinite(frame.declutterScale)
+      ? frame.declutterScale
+      : 1;
+    declutter.y = Number.isFinite(frame.declutterAlpha)
+      ? frame.declutterAlpha
+      : 1;
     declutter.z = frame.sonar === false ? 0 : 1;
     used.clear();
     replaced.length = 0;
