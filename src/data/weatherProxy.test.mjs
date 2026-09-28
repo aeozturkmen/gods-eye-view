@@ -1159,3 +1159,36 @@ test('large tile validation checks requested dimensions and bounded compressed b
   });
   assert.equal((await request(`${tile()}&size=1024`)).statusCode, 200);
 });
+
+test('EUMETSAT interval time dimensions expand to the last 24 hours of instants', async () => {
+  const { parseWeatherCapabilities } =
+    await import('../../server/providers/weather.js');
+  const xml = `<WMS_Capabilities><Capability><Layer><Name>WMS</Name><Layer>
+    <Name>ir108</Name>
+    <EX_GeographicBoundingBox><westBoundLongitude>-77.0</westBoundLongitude>
+    <eastBoundLongitude>77.0</eastBoundLongitude><southBoundLatitude>-77.0</southBoundLatitude>
+    <northBoundLatitude>77.0</northBoundLatitude></EX_GeographicBoundingBox>
+    <Dimension name="time" default="2026-09-28T09:45:00Z" units="ISO8601" nearestValue="1">2020-09-01T00:00:00.000Z/2026-09-28T09:45:00.000Z/PT15M</Dimension>
+  </Layer></Layer></Capability></WMS_Capabilities>`;
+  const now = Date.parse('2026-09-28T09:50:00Z');
+  const value = parseWeatherCapabilities(xml, 'clouds-europe', now);
+  assert.deepEqual(value.bounds, {
+    west: -77,
+    south: -77,
+    east: 77,
+    north: 77,
+  });
+  assert.equal(value.times.length, 13);
+  assert.equal(value.times.at(-1), '2026-09-28T09:45:00.000Z');
+  assert.equal(value.times.at(-2), '2026-09-28T09:30:00.000Z');
+  assert.equal(value.allowedTimes.length, 26);
+  assert.throws(
+    () =>
+      parseWeatherCapabilities(
+        xml.replace('/PT15M', '/P1D'),
+        'clouds-europe',
+        now,
+      ),
+    /invalid_weather_metadata/,
+  );
+});

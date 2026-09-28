@@ -4,8 +4,18 @@ export const WEATHER_PRODUCTS = Object.freeze([
   'radar',
   'clouds',
   'clouds-regional',
+  'clouds-europe',
   'lightning',
 ]);
+
+/** Satellite infrared products (brightness-filtered into cloud tops). */
+export const INFRARED_WEATHER_PRODUCTS = Object.freeze([
+  'clouds',
+  'clouds-regional',
+  'clouds-europe',
+]);
+export const isInfraredWeatherProduct = (product) =>
+  INFRARED_WEATHER_PRODUCTS.includes(product);
 
 /** Only bounded, explicit observations may become imagery requests. */
 export function validateWeatherSnapshot(value, product) {
@@ -48,6 +58,7 @@ export function validateWeatherSnapshot(value, product) {
 export const WEATHER_IMAGE_SIZES = Object.freeze({
   radar: Object.freeze({ width: 4096, height: 2048 }),
   'clouds-regional': Object.freeze({ width: 4096, height: 2048 }),
+  'clouds-europe': Object.freeze({ width: 4096, height: 2048 }),
   clouds: Object.freeze({ width: 2048, height: 1024 }),
   lightning: Object.freeze({ width: 4096, height: 2048 }),
 });

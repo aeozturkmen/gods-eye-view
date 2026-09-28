@@ -1596,9 +1596,9 @@ test('satellite mode chips restage history without changing time or latest-follo
   assert.deepEqual(
     h.layer
       .getRowControls()
-      .chips.slice(0, 4)
+      .chips.slice(0, 5)
       .map((chip) => chip.label),
-    ['N. America', 'Global', 'Clouds only', 'Full'],
+    ['N. America', 'Europe · ME', 'Global', 'Clouds only', 'Full'],
   );
   h.stages[2].finish();
   await flush();

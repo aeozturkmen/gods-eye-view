@@ -316,8 +316,8 @@ const OPTION_GROUPS = Object.freeze({
       'product',
       'p',
       'clouds-regional',
-      ['clouds', 'clouds-regional'],
-      { clouds: 'g', 'clouds-regional': 'r' },
+      ['clouds', 'clouds-regional', 'clouds-europe'],
+      { clouds: 'g', 'clouds-regional': 'r', 'clouds-europe': 'e' },
     ),
   ]),
   wind: Object.freeze([

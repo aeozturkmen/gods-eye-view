@@ -1,4 +1,4 @@
-import { weatherTileUrl } from './source.js';
+import { isInfraredWeatherProduct, weatherTileUrl } from './source.js';
 import { orderWeatherImagery } from './imageryOrder.js';
 import { imageryHostStatus } from './imageryHost.js';
 import { createRasterTileProvider } from './rasterTiles.js';
@@ -338,7 +338,9 @@ function createGlobeRendering({
             ? 'NOAA/NWS lightning density · derived from Vaisala NLDN/GLD360'
             : snapshot.product === 'radar'
               ? 'NOAA nowCOAST · NWS/OAR MRMS'
-              : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
+              : snapshot.product === 'clouds-europe'
+                ? `Contains modified EUMETSAT Meteosat data ${new Date().getUTCFullYear()}`
+                : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
           false,
         );
         const provider = global
@@ -383,7 +385,12 @@ function createGlobeRendering({
             .then((image) => {
               // Cesium decodes tiles as ImageBitmaps already flipped, since WebGL
               // ignores UNPACK_FLIP_Y for them; a canvas upload flips again.
-              if (!frame.closed && snapshot.product === 'clouds-regional')
+              // The global mosaic takes the whole-image path, never tiles.
+              if (
+                !frame.closed &&
+                snapshot.product !== 'clouds' &&
+                isInfraredWeatherProduct(snapshot.product)
+              )
                 image = processInfraredImage(image, infrared, createCanvas, {
                   flipY:
                     typeof ImageBitmap !== 'undefined' &&

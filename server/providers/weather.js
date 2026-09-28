@@ -50,7 +50,28 @@ const PRODUCTS = Object.freeze({
       'GOES-19/18 longwave infrared Band 14 cloud and surface temperature patterns, approximately 2 km and 5-minute updates. Not a cloud-only mask.',
     image: Object.freeze({ width: 4096, height: 2048 }),
   }),
+  // EUMETSAT's own WMS (keyless, open data). Layer-scoped capabilities stay
+  // ~7 KB; the time dimension is advertised as a start/end/period interval.
+  'clouds-europe': Object.freeze({
+    endpoint: 'https://view.eumetsat.int/geoserver/msg_fes/ir108/ows',
+    layer: 'ir108',
+    style: '',
+    title: 'Meteosat infrared · Europe, Africa, Middle East',
+    coverage:
+      'Meteosat 0° full disc: about 77°W–77°E and 77°S–77°N, best over Europe, Africa and the Middle East; not global.',
+    description:
+      'Meteosat SEVIRI 10.8 µm longwave infrared cloud and surface temperature patterns, about 3 km at nadir and 15-minute updates. Not a cloud-only mask.',
+    source: 'EUMETSAT',
+    attribution: () =>
+      `Contains modified EUMETSAT Meteosat data ${new Date().getUTCFullYear()}`,
+    image: Object.freeze({ width: 4096, height: 2048 }),
+  }),
 });
+
+/** GetCapabilities/GetMap base for a product (NOAA service or its own WMS). */
+function productEndpoint(spec) {
+  return spec.endpoint ?? `${BASE}${spec.service}/ows`;
+}
 
 // Whole-extent images: 2:1 sizes up to each product's largest (the default).
 const IMAGE_SIZES = Object.freeze(['1024x512', '2048x1024', '4096x2048']);
@@ -150,7 +171,7 @@ export function parseWeatherCapabilities(xml, product, nowMs = Date.now()) {
     !/\bunits\s*=\s*["']ISO8601["']/.test(dimensions[0][1])
   )
     throw failure('invalid_weather_metadata');
-  const raw = dimensions[0][2].trim().split(',');
+  const raw = expandTimeIntervals(dimensions[0][2].trim().split(','), nowMs);
   if (!raw.length || raw.length > 512)
     throw failure('invalid_weather_metadata');
   const times = raw.map((value) => observationTime(value.trim()));
@@ -167,6 +188,43 @@ export function parseWeatherCapabilities(xml, product, nowMs = Date.now()) {
     .slice(-26);
   if (!recent.length) throw failure('weather_observations_expired');
   return { bounds, times: recent.slice(-13), allowedTimes: recent };
+}
+
+/**
+ * Expand ISO 8601 `start/end/PTnM` intervals to the explicit instants of the
+ * last 24 hours (newest last); plain instants pass through. Only minute and
+ * hour periods are accepted — anything else is malformed metadata.
+ */
+function expandTimeIntervals(entries, nowMs) {
+  const out = [];
+  for (const entry of entries) {
+    const parts = entry.trim().split('/');
+    if (parts.length === 1) {
+      out.push(parts[0]);
+      continue;
+    }
+    const period = parts[2]?.match(/^PT(?:(\d{1,2})H)?(?:(\d{1,3})M)?$/);
+    const startMs = Date.parse(parts[0]);
+    const endMs = Date.parse(parts[1]);
+    const stepMs =
+      ((Number(period?.[1]) || 0) * 60 + (Number(period?.[2]) || 0)) * 60_000;
+    if (
+      parts.length !== 3 ||
+      !period ||
+      stepMs < 60_000 ||
+      !Number.isFinite(startMs) ||
+      !Number.isFinite(endMs) ||
+      endMs < startMs
+    )
+      throw failure('invalid_weather_metadata');
+    const floor = Math.max(startMs, nowMs - 24 * HOUR);
+    const instants = [];
+    // Walk back from the advertised end so every instant stays on its grid.
+    for (let t = endMs; t >= floor && instants.length < 512; t -= stepMs)
+      instants.push(new Date(t).toISOString().replace('.000Z', 'Z'));
+    out.push(...instants.reverse());
+  }
+  return out;
 }
 
 /** A detail window `west,south,east,north` in degrees, rounded to 0.25° so cache
@@ -234,7 +292,7 @@ function validatePng(bytes, width, height) {
   return buffer;
 }
 
-/** Fixed NOAA observed-weather metadata and WMS tiles; no client-supplied destinations. */
+/** Fixed NOAA/EUMETSAT observed-weather metadata and WMS tiles; no client-supplied destinations. */
 export function weatherProxy({
   fetchImpl = fetch,
   now = () => Date.now(),
@@ -344,13 +402,13 @@ export function weatherProxy({
     try {
       if (
         now() - (attempts.get(product) ?? -Infinity) < 30_000 &&
-        !operations.has(`metadata:${spec.service}`)
+        !operations.has(`metadata:${productEndpoint(spec)}`)
       )
         throw failure('weather_upstream_unavailable');
       attempts.set(product, now());
-      const url = `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
+      const url = `${productEndpoint(spec)}?service=WMS&version=1.3.0&request=GetCapabilities`;
       const xml = await shared(
-        `metadata:${spec.service}`,
+        `metadata:${productEndpoint(spec)}`,
         (activeSignal) => upstream(url, activeSignal),
         signal,
       );
@@ -388,8 +446,11 @@ export function weatherProxy({
       title: spec.title,
       coverage: spec.coverage,
       description: spec.description,
-      source: 'NOAA nowCOAST',
-      attribution: spec.attribution ?? 'NOAA/NWS/NESDIS nowCOAST',
+      source: spec.source ?? 'NOAA nowCOAST',
+      attribution:
+        (typeof spec.attribution === 'function'
+          ? spec.attribution()
+          : spec.attribution) ?? 'NOAA/NWS/NESDIS nowCOAST',
       bounds: value?.bounds ?? null,
       times: value?.times ?? [],
       latest: time,
@@ -543,7 +604,7 @@ export function weatherProxy({
         if (now() - (tileFailures.get(key) ?? -Infinity) < 30_000)
           throw failure('weather_upstream_unavailable');
         const spec = PRODUCTS[product];
-        const upstreamUrl = new URL(`${BASE}${spec.service}/ows`);
+        const upstreamUrl = new URL(productEndpoint(spec));
         upstreamUrl.search = new URLSearchParams({
           service: 'WMS',
           version: '1.1.1',

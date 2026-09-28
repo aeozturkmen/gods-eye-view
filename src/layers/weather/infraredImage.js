@@ -1,5 +1,5 @@
 import { readResponseBytesCapped } from '../../sources/httpBody.js';
-import { weatherImageUrl } from './source.js';
+import { isInfraredWeatherProduct, weatherImageUrl } from './source.js';
 import { infraredAlpha } from './infraredAlpha.js';
 
 export const MAX_MOSAIC_BYTES = 4 * 1024 * 1024;
@@ -93,7 +93,7 @@ export async function acquireWeatherImage(
     if (image.width !== size.width || image.height !== size.height)
       throw new Error('Invalid weather image dimensions');
     let texture;
-    if (product === 'clouds' || product === 'clouds-regional')
+    if (isInfraredWeatherProduct(product))
       texture = processInfraredImage(image, mode, createCanvas);
     else {
       texture = createCanvas();

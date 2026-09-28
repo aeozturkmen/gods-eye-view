@@ -94,7 +94,12 @@ export function createWeatherLayer({
   const observationDelayed = () =>
     manifest?.latest &&
     Date.now() - Date.parse(manifest.latest) >
-      (product === 'clouds' ? 240 : lightning ? 45 : 20) * 60_000;
+      (product === 'clouds'
+        ? 240
+        : lightning || product === 'clouds-europe'
+          ? 45
+          : 20) *
+        60_000;
   const stop = () => {
     if (clock) return;
     playing = false;
@@ -393,7 +398,9 @@ export function createWeatherLayer({
       }
       if (
         satellite &&
-        ['clouds', 'clouds-regional'].includes(params.product) &&
+        ['clouds', 'clouds-regional', 'clouds-europe'].includes(
+          params.product,
+        ) &&
         params.product !== product
       ) {
         product = params.product;
@@ -549,7 +556,9 @@ export function createWeatherLayer({
               ? 'Americas + Pacific'
               : product === 'clouds'
                 ? 'Global · 60°S–60°N'
-                : 'North America',
+                : product === 'clouds-europe'
+                  ? 'Europe · Africa · Middle East'
+                  : 'North America',
           shownTime: time,
           maxGapMinutes: maxGap() / 60_000,
           detail: time
@@ -577,6 +586,7 @@ export function createWeatherLayer({
           ...(satellite
             ? [
                 ['clouds-regional', 'N. America'],
+                ['clouds-europe', 'Europe · ME'],
                 ['clouds', 'Global'],
               ].map(([value, label]) => ({
                 id: value,
@@ -586,7 +596,9 @@ export function createWeatherLayer({
                 title:
                   value === 'clouds'
                     ? 'Hourly global mosaic; usually 2–3 hours delayed'
-                    : 'GOES regional clouds; approximately 5-minute updates',
+                    : value === 'clouds-europe'
+                      ? 'EUMETSAT Meteosat infrared over Europe, Africa and the Middle East; 15-minute updates'
+                      : 'GOES regional clouds; approximately 5-minute updates',
               }))
             : []),
           ...(satellite
@@ -638,7 +650,7 @@ export function createWeatherLayer({
             : [],
         info: hostHidden
           ? hostStatus
-          : `${radar ? 'RADAR REFLECTIVITY · dBZ' : lightning ? 'LIGHTNING DENSITY · 15 min accumulation' : product === 'clouds' ? 'GLOBAL INFRARED · hourly' : 'GOES INFRARED · ~5 min'}\n${time ? `${followLatest ? 'Latest observation' : 'History'}: ${utc(time)}\n${lag}${current && !followLatest ? ` · frame ${index + 1}/${times.length}` : ''}${loading ? ' · loading' : ''}` : `Observation: unavailable${loading ? ' · loading' : ''}`}${missing ? `\n${missing}` : ''}${manifest?.stale ? '\nSTALE · cached source metadata' : ''}${error || diagnostic?.error ? '\n' + (error || diagnostic.error) : ''}\n${radar ? 'Contiguous US · gaps ≠ no rain' : lightning ? 'Americas + Pacific · not individual strikes\nColor: strikes/km²/min ×10³' : product === 'clouds' ? '60°S–60°N · typically 2–3 h delayed' : 'North America · infrared imagery'}${outside ? '\nMap center is outside source coverage' : ''}${motion?.matches ? (clock ? '\nReduced motion · history playback unavailable' : '\nReduced motion · manual history available') : ''}`,
+          : `${radar ? 'RADAR REFLECTIVITY · dBZ' : lightning ? 'LIGHTNING DENSITY · 15 min accumulation' : product === 'clouds' ? 'GLOBAL INFRARED · hourly' : product === 'clouds-europe' ? 'METEOSAT INFRARED · 15 min' : 'GOES INFRARED · ~5 min'}\n${time ? `${followLatest ? 'Latest observation' : 'History'}: ${utc(time)}\n${lag}${current && !followLatest ? ` · frame ${index + 1}/${times.length}` : ''}${loading ? ' · loading' : ''}` : `Observation: unavailable${loading ? ' · loading' : ''}`}${missing ? `\n${missing}` : ''}${manifest?.stale ? '\nSTALE · cached source metadata' : ''}${error || diagnostic?.error ? '\n' + (error || diagnostic.error) : ''}\n${radar ? 'Contiguous US · gaps ≠ no rain' : lightning ? 'Americas + Pacific · not individual strikes\nColor: strikes/km²/min ×10³' : product === 'clouds' ? '60°S–60°N · typically 2–3 h delayed' : product === 'clouds-europe' ? 'Europe · Africa · Middle East · EUMETSAT' : 'North America · infrared imagery'}${outside ? '\nMap center is outside source coverage' : ''}${motion?.matches ? (clock ? '\nReduced motion · history playback unavailable' : '\nReduced motion · manual history available') : ''}`,
         infoTitle: lightning
           ? 'NOAA/NWS 15-minute lightning density derived from Vaisala NLDN/GLD360. Coverage 110°E across the Pacific/Americas to 0°, 25°S–80°N. Not a live strike count, global coverage or a safety warning.'
           : radar
@@ -682,7 +694,7 @@ export function createWeatherLayer({
         loading,
         error: error || rendering?.getDiagnostics().error || null,
         stale: Boolean(manifest?.stale || observationDelayed()),
-        source: 'NOAA nowCOAST',
+        source: product === 'clouds-europe' ? 'EUMETSAT' : 'NOAA nowCOAST',
         observedAt: shownTime(),
       };
     },
