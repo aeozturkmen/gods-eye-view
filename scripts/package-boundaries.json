@@ -497,6 +497,7 @@
   "ui-shell": {
     "exports": ["./ui/shell"],
     "modules": [
+      "src/app/renderQuality.js",
       "src/hudLayouts.js",
       "src/hudLayoutPolicy.js",
       "src/cyberSonar.js",
@@ -1275,6 +1276,7 @@
       "./standalone/catalog"
     ],
     "modules": [
+      "src/app/renderQuality.js",
       "src/data/viewBounds.js",
       "src/cyberSonarScene.js",
       "src/declutter.js",

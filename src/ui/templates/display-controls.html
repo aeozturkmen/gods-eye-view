@@ -7,6 +7,16 @@
     </div>
     <div class="pp-panel-body" data-rail-scroller>
     <div class="pp-toggle-group">
+      <div class="pp-slider-row visible render-quality-row" id="render-quality-row" title="Lower quality runs cooler: fewer anti-aliasing samples, less 3D tile detail, and (Low) a smaller render and no panel blur">
+        <span class="pp-slider-mini-label">Quality</span>
+        <div class="pp-mode-seg" role="radiogroup" aria-label="Render quality">
+          <button class="pp-mode-btn" data-render-quality="high" role="radio" aria-checked="false">High</button>
+          <button class="pp-mode-btn" data-render-quality="balanced" role="radio" aria-checked="false">Balanced</button>
+          <button class="pp-mode-btn" data-render-quality="low" role="radio" aria-checked="false">Low</button>
+        </div>
+      </div>
+    </div>
+    <div class="pp-toggle-group">
       <button class="pp-toggle-btn" id="hud-toggle" title="Intelligence HUD (H)">
         <span class="pp-icon">&#x25CE;</span>
         <span class="pp-label">HUD</span>

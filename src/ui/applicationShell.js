@@ -22,6 +22,11 @@ import { bindClearLayersControl } from './layers.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
 import { bindMapZoomControls } from './mapZoomControls.js';
 import {
+  applyRenderQuality,
+  RENDER_QUALITY_PRESETS,
+  resolveInitialRenderQuality,
+} from '../app/renderQuality.js';
+import {
   isDeclutterEnabled,
   restoreDeclutterPreference,
   setDeclutterEnabled,
@@ -584,6 +589,7 @@ export class StyleManager extends ShellFacade {
     this._initCameraOrientationControls();
     this._initMapZoomControls();
     this._initDeclutterToggle();
+    this._initRenderQuality();
     this._initClearSelectedLayersButton();
     this._initHUDToggle();
     this._initModels3dToggle();
@@ -1465,6 +1471,52 @@ export class StyleManager extends ShellFacade {
     };
   }
 
+  /** Apply the starting render-quality preset and wire the Display row. */
+  _initRenderQuality() {
+    this._removeRenderQuality?.();
+    const buttons = [
+      ...document.querySelectorAll('#render-quality-row [data-render-quality]'),
+    ];
+    let current = null;
+    const sync = (preset) => {
+      current = preset;
+      for (const button of buttons) {
+        const on = button.dataset.renderQuality === preset;
+        button.classList.toggle('active', on);
+        button.setAttribute('aria-checked', String(on));
+      }
+    };
+    // The URL/storage choice applies without re-remembering a ?quality= trial.
+    sync(
+      applyRenderQuality(this.viewer, resolveInitialRenderQuality(), {
+        remember: false,
+      }),
+    );
+    const onClick = (event) =>
+      sync(
+        applyRenderQuality(
+          this.viewer,
+          event.currentTarget.dataset.renderQuality,
+        ),
+      );
+    for (const button of buttons) button.addEventListener('click', onClick);
+    // A tileset that loads later (map switch) picks up the current detail.
+    const removeTilesetHook =
+      this.viewer?.scene?.primitives?.primitiveAdded?.addEventListener(
+        (primitive) => {
+          if (typeof primitive?.maximumScreenSpaceError === 'number')
+            primitive.maximumScreenSpaceError =
+              RENDER_QUALITY_PRESETS[current].tileError;
+        },
+      );
+    this._removeRenderQuality = () => {
+      removeTilesetHook?.();
+      for (const button of buttons)
+        button.removeEventListener('click', onClick);
+      this._removeRenderQuality = null;
+    };
+  }
+
   _syncDeclutterButton() {
     const enabled = isDeclutterEnabled();
     this._declutterBtn?.setAttribute('aria-pressed', String(enabled));
@@ -1597,6 +1649,7 @@ export class StyleManager extends ShellFacade {
     this._cameraOrientationControls?.destroy();
     this._mapZoomControls?.destroy();
     this._removeDeclutterToggle?.();
+    this._removeRenderQuality?.();
     this._clearLayersControl?.destroy();
     this._cctvControls?.destroy();
     this._radioControls?.destroy();
