@@ -25,6 +25,7 @@ const PANEL_GROUPS = [
       'military',
       'local-adsb',
       'ais-live-vessels',
+      'strait-transits',
       'traffic',
       'transit',
       'bikeshare',

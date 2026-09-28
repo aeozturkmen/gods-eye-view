@@ -1276,6 +1276,9 @@
       "./standalone/catalog"
     ],
     "modules": [
+      "src/layers/straits/index.js",
+      "src/layers/straits/officialStats.json",
+      "src/layers/straits/model.js",
       "src/layers/gnss/index.js",
       "src/layers/gnss/source.js",
       "src/app/renderQuality.js",
@@ -1997,6 +2000,9 @@
   "application-layer-construction": {
     "exports": ["./application/layers"],
     "modules": [
+      "src/layers/straits/index.js",
+      "src/layers/straits/model.js",
+      "src/layers/straits/officialStats.json",
       "src/layers/gnss/index.js",
       "src/layers/gnss/source.js",
       "src/data/viewBounds.js",

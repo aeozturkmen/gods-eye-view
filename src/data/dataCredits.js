@@ -282,6 +282,10 @@ export const DATA_CREDITS = [
     html: 'Observed weather: <a href="https://nowcoast.noaa.gov/" target="_blank" rel="noopener">NOAA nowCOAST</a> · NWS/OAR MRMS radar; NESDIS GOES and global satellite partners. <a href="https://oceanservice.noaa.gov/disclaimer.html" target="_blank" rel="noopener">Source disclaimer</a>.',
   },
   {
+    key: 'straits-uab',
+    html: 'Strait transits: <a href="https://denizcilikistatistikleri.uab.gov.tr/turk-bogazlari-gemi-gecis-istatistikleri" target="_blank" rel="noopener">T.C. Ulaştırma ve Altyapı Bakanlığı · Türk Boğazları Gemi Geçiş İstatistikleri</a> (official monthly totals, released quarterly).',
+  },
+  {
     key: 'gnss-adsblol',
     html: 'GPS interference estimate: ADS-B navigation accuracy (NACp) from <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> (ODbL 1.0); method after <a href="https://gpsjam.org/faq" target="_blank" rel="noopener">gpsjam.org</a>. An indicator, not proof of jamming.',
   },

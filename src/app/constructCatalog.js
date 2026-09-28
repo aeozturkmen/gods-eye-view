@@ -24,6 +24,7 @@ import { createApplicationAwareness } from './layers/militaryAwareness.js';
 import { createApplicationFirms } from './layers/firms.js';
 import { createApplicationEarthquakes } from './layers/earthquakes.js';
 import { createGnssInterferenceLayer } from '../layers/gnss/index.js';
+import { createStraitTransitsLayer } from '../layers/straits/index.js';
 import { createApplicationFirePerimeters } from './layers/perimeters.js';
 import { createApplicationCables } from './layers/submarineCables.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
@@ -161,6 +162,7 @@ export function createApplicationCatalog({
         createApplicationDirections(),
         createApplicationRecentImagery(),
         vessels,
+        createStraitTransitsLayer(),
         installations,
         createApplicationAwareness({
           flights,
