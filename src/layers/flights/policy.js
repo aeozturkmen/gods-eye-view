@@ -195,6 +195,10 @@ export const LANDED_SPEED_MAX_MPS = 23;
 /** @constant {number} Fleet dead-reckoning tick interval (ms) — ~12Hz, not per-frame. */
 
 export const FLEET_DR_INTERVAL_MS = 80;
+/** Off-screen contacts (outside the padded view box) get their full fleet-tick
+ * update once every this many ticks (~2 s at 80 ms), round-robin; on-screen
+ * ones every tick. Their icons are not visible, so the lag is not either. */
+export const FLEET_OFFSCREEN_STRIDE = 25;
 
 /** @constant {number} Max ms between rotation passes while the camera is idle. */
 

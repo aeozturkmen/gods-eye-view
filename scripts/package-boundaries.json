@@ -745,6 +745,7 @@
   "civil-flights": {
     "exports": ["./layers/flights"],
     "modules": [
+      "src/data/viewBounds.js",
       "src/cyberSonar.js",
       "src/data/aircraftClass.js",
       "src/data/aircraftIcons.js",
@@ -786,6 +787,7 @@
   "military-flights": {
     "exports": ["./layers/military"],
     "modules": [
+      "src/data/viewBounds.js",
       "src/cyberSonar.js",
       "src/data/aircraftClass.js",
       "src/data/aircraftIcons.js",
@@ -1273,6 +1275,7 @@
       "./standalone/catalog"
     ],
     "modules": [
+      "src/data/viewBounds.js",
       "src/cyberSonarScene.js",
       "src/declutter.js",
       "src/cyberSonar.js",
@@ -1990,6 +1993,7 @@
   "application-layer-construction": {
     "exports": ["./application/layers"],
     "modules": [
+      "src/data/viewBounds.js",
       "src/cyberSonar.js",
       "src/data/bhoteKoshiEvent.js",
       "src/ui/imagerySplit.js",

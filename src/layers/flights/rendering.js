@@ -1,4 +1,5 @@
 import * as Cesium from 'cesium';
+import { createViewBounds, offscreenTurn } from '../../data/viewBounds.js';
 import { cyberSonarBaseAlpha } from '../../cyberSonar.js';
 import { selectModelEligible } from '../../data/modelEligibility.js';
 import { civilAircraftModelSpec } from './modelSpec.js';
@@ -30,6 +31,7 @@ import {
   TRACKED_MODEL_MIN_PX,
   TRACKED_MODEL_MAX_PX,
   FLEET_DR_INTERVAL_MS,
+  FLEET_OFFSCREEN_STRIDE,
   COURSE_SLEW_DT_MAX_SEC,
   ROTATION_REFRESH_MS,
   COURSE_MAX_DPS,
@@ -943,8 +945,34 @@ export function createRendering({
       for (const icao of toRelease) _releaseModel(icao);
     }
 
+    // Viewport culling (fork): contacts outside the padded view box skip this
+    // tick unless it is their round-robin turn. Recomputed only when the camera
+    // pose changes, so a pan brings newly visible contacts up to date at once.
+    // Everything is processed while a focus target or cockpit is active, and
+    // a contact that owns a 3D model is always processed.
+    if (poseSig !== flightState._viewBoundsSig) {
+      flightState._viewBoundsSig = poseSig;
+      flightState._viewBounds = createViewBounds(
+        camera.computeViewRectangle?.(Cesium.Ellipsoid.WGS84),
+      );
+    }
+    const viewBounds = flightState._viewBounds;
+    const cullOffscreen =
+      !viewBounds.all && !focusTarget && !flightState._cockpitContactMode;
+    const fleetTick = (flightState._fleetTickCount =
+      (flightState._fleetTickCount || 0) + 1);
+    let fleetIndex = -1;
     for (const [icao24, bb] of flightState._billboards) {
       if (icao24 === flightState._trackedIcao) continue; // tracked entity owns its own motion
+      fleetIndex += 1;
+      if (cullOffscreen && !flightState._models.has(icao24)) {
+        const fix = flightState.records.data.get(icao24);
+        if (
+          !viewBounds.contains(fix?.rawLat, fix?.rawLon) &&
+          !offscreenTurn(fleetIndex, fleetTick, FLEET_OFFSCREEN_STRIDE)
+        )
+          continue;
+      }
 
       const info = flightState.records.data.get(icao24);
 
