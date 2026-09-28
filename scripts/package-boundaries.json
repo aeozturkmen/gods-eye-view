@@ -168,6 +168,7 @@
       "server/providers/cctv/sourcesEurope.js",
       "server/providers/cctv/sourcesTurkey.js",
       "server/providers/cctv/stream.js",
+      "server/providers/cctv/multiAddress.js",
       "server/providers/common/http.js",
       "src/data/directionText.js",
       "server/providers/common/geo.js",

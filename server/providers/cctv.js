@@ -18,6 +18,7 @@ import {
 } from './cctv/constants.js';
 import { sanitizeCctvRangeHeader } from './cctv/range.js';
 import { createHlsPuller } from './cctv/stream.js';
+import { createMultiAddressFetch } from './cctv/multiAddress.js';
 import { createPlaceholderDetector } from './cctv/placeholders.js';
 import { googleServerApiKey } from './places/google-key.js';
 export { CCTV_FRAME_FETCH_TIMEOUT_MS, fetchCctvImageFromUpstream };
@@ -43,7 +44,8 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
    * for any catalog the proxy can actually serve. */
   const HEALTH_MAX_ENTRIES = CCTV_MAX_SOURCES_CEILING;
   /** Live HLS strategies (see ./cctv/stream.js). Shared across dev and preview. */
-  const puller = createHlsPuller();
+  // Some HLS hosts list dead addresses in DNS (İBB); see multiAddress.js.
+  const puller = createHlsPuller({ fetchImpl: createMultiAddressFetch() });
 
   /** Update the health entry for a camera, evicting the oldest entry if at capacity. */
   // Provider "camera offline" cards arrive as valid JPEGs; see placeholders.js.
