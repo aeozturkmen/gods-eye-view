@@ -28,6 +28,7 @@ export function createState({ services }) {
   layerState._enabled = false;
 
   layerState._activeCameraId = null;
+  layerState._activeCameraAuto = false;
 
   layerState._coverageMode = 'on';
   // 'off' | 'on' (wireframes) | 'viewshed' (color-coded volumes)

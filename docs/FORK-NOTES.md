@@ -7,9 +7,10 @@ branches from upstream `b210ab0` and adds five things:
 2. a Google Earth-style zoom control and a "quiet map" declutter toggle,
 3. seven CCTV packs for Europe and Turkey,
 4. a fix for the CCTV loading phase, whose cost grew quadratically with camera count,
-5. a fix for the black screen and single-digit FPS on the Google Photorealistic 3D map.
+5. a fix for the black screen and single-digit FPS on the Google Photorealistic 3D map,
+6. offline provider cameras no longer masquerading as healthy frames.
 
-Every change is covered by unit tests: `npm test` runs 5,084 tests and passes.
+Every change is covered by unit tests: `npm test` runs 5,091 tests and passes.
 `npm run check:boundaries` also passes.
 
 ## Contents
@@ -20,6 +21,7 @@ Every change is covered by unit tests: `npm test` runs 5,084 tests and passes.
 - [3. CCTV packs: Europe and Turkey](#3-cctv-packs-europe-and-turkey)
 - [4. CCTV loading cost (O(N²) → O(N))](#4-cctv-loading-cost-on²--on)
 - [5. Black screen on Google 3D: synchronous GPU readbacks](#5-black-screen-on-google-3d-synchronous-gpu-readbacks)
+- [6. Offline cameras reported as "SNAPSHOT · OK"](#6-offline-cameras-reported-as-snapshot--ok)
 - [How it was measured](#how-it-was-measured)
 - [Trade-offs and known limits](#trade-offs-and-known-limits)
 - [Commits](#commits)
@@ -183,6 +185,31 @@ together with its fix:
 | `readPixels` per 50 s | 33.4 s | 4.8 s |
 | Height callbacks fired per 45 s | 35,354 | ~1,000 |
 | Environment-map regenerations | 125 | 1 |
+
+## 6. Offline cameras reported as "SNAPSHOT · OK"
+
+**Symptom:** the default CCTV camera, Austin "5th St / Congress Ave", showed
+the City of Austin "Image Unavailable" card while the panel said
+`SNAPSHOT · OK`.
+
+**Cause:** some operators answer an offline camera with a valid JPEG card. The
+Austin card is 12,805 bytes and is served for several cameras. The frame proxy
+only checked `image/*`. The default camera is also simply the first catalog
+record, and that record was offline.
+
+**Fix** (`server/providers/cctv/placeholders.js`, `src/layers/cctv/health.js`):
+
+- **Placeholder detection:**
+  - Known placeholder bytes (sha256) are recognized on the first frame.
+  - Byte-identical frames from three or more *different* cameras on one host
+    are learned as a placeholder. A parked camera repeating its own frame does
+    not count.
+- **Offline handling:** a detected card goes through the normal fallback chain
+  (Street View, then synthetic "CAMERA OFFLINE"). The health entry records
+  `providerOffline`, and the panel shows the real status.
+- **Default camera:** an *automatically chosen* default camera that turns out to
+  be offline hands over to the next camera not known to be offline. A camera
+  the user or voice chose is never swapped.
 
 ## How it was measured
 

@@ -82,6 +82,9 @@ export function createSelection({
       return CCTV_ACTIVATION_RESULT.UNCHANGED;
     }
     layerState._activeCameraId = cameraId;
+    // Any real activation is a choice; the health pass restores the flag when
+    // it is the one that moved an automatic default (health.js).
+    layerState._activeCameraAuto = false;
     layerState._autoHopSuspended = false;
     // A real activation creates projection work — wake the self-stopping loop.
     parts.projection.startProjectionLoop();

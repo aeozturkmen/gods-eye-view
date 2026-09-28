@@ -18,6 +18,7 @@ import {
 } from './cctv/constants.js';
 import { sanitizeCctvRangeHeader } from './cctv/range.js';
 import { createHlsPuller } from './cctv/stream.js';
+import { createPlaceholderDetector } from './cctv/placeholders.js';
 import { googleServerApiKey } from './places/google-key.js';
 export { CCTV_FRAME_FETCH_TIMEOUT_MS, fetchCctvImageFromUpstream };
 /**
@@ -45,6 +46,8 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
   const puller = createHlsPuller();
 
   /** Update the health entry for a camera, evicting the oldest entry if at capacity. */
+  // Provider "camera offline" cards arrive as valid JPEGs; see placeholders.js.
+  const placeholders = createPlaceholderDetector();
   const setHealth = (cameraId, patch) => {
     // Evict oldest entries if the health map grows beyond the cap
     if (!health.has(cameraId) && health.size >= HEALTH_MAX_ENTRIES) {
@@ -58,6 +61,8 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
       sourceKind: patch.sourceKind || prev.sourceKind || 'unknown',
       label: patch.label || prev.label || '',
       message: patch.message || prev.message || '',
+      // Only the latest frame decides: a live frame clears it again.
+      providerOffline: patch.providerOffline === true,
       updatedAt: Date.now(),
     });
   };
@@ -489,7 +494,16 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
           source?.sourceKind === 'txdot-its'
             ? await fetchTxdotSnapshot(upstreamCandidate)
             : await fetchCctvImageFromUpstream(upstreamCandidate);
-        if (upstreamImage?.ok) {
+        // A provider's "camera offline" card is a valid image but not a frame:
+        // treat it like an unavailable upstream (Street View, then synthetic).
+        const offlineCard =
+          upstreamImage?.ok &&
+          placeholders.isPlaceholder(
+            upstreamCandidate,
+            cameraId,
+            upstreamImage.body,
+          );
+        if (upstreamImage?.ok && !offlineCard) {
           setHealth(cameraId, {
             status: 'ok',
             sourceKind: 'snapshot',
@@ -517,7 +531,10 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
             status: 'degraded',
             sourceKind: 'streetview',
             label: 'Google Street View',
-            message: 'Fallback Street View frame',
+            providerOffline: Boolean(offlineCard),
+            message: offlineCard
+              ? 'Camera offline (provider placeholder); Street View shown'
+              : 'Fallback Street View frame',
           });
           res.writeHead(200, {
             'Content-Type': sv.contentType,
@@ -532,18 +549,23 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
           cameraId,
           label,
           city,
-          status: source?.url
-            ? 'UPSTREAM UNAVAILABLE'
-            : 'NO UPSTREAM CONFIGURED',
+          status: offlineCard
+            ? 'CAMERA OFFLINE'
+            : source?.url
+              ? 'UPSTREAM UNAVAILABLE'
+              : 'NO UPSTREAM CONFIGURED',
         });
 
         setHealth(cameraId, {
           status: 'degraded',
           sourceKind: 'synthetic',
           label: source?.provider || 'Synthetic fallback',
-          message: source?.url
-            ? 'Upstream unavailable'
-            : 'No source configured',
+          providerOffline: Boolean(offlineCard),
+          message: offlineCard
+            ? 'Camera offline (provider placeholder)'
+            : source?.url
+              ? 'Upstream unavailable'
+              : 'No source configured',
         });
 
         res.writeHead(200, {
