@@ -16,6 +16,7 @@ test('reference factories retain compatibility without starting acquisition or s
     'earthquakes',
     'fire-perimeters',
     'cables',
+    'gnss-interference',
   ]);
   assert.notEqual(first.earthquakes, second.earthquakes);
   assert.notEqual(first['fire-perimeters'], second['fire-perimeters']);
