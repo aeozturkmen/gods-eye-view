@@ -22,6 +22,8 @@ Every change is covered by unit tests: `npm test` runs 5,091 tests and passes.
 - [4. CCTV loading cost (O(N²) → O(N))](#4-cctv-loading-cost-on²--on)
 - [5. Black screen on Google 3D: synchronous GPU readbacks](#5-black-screen-on-google-3d-synchronous-gpu-readbacks)
 - [6. Offline cameras reported as "SNAPSHOT · OK"](#6-offline-cameras-reported-as-snapshot--ok)
+- [7. Idle cost, viewport culling and quality presets](#7-idle-cost-viewport-culling-and-quality-presets)
+- [8. Regional layers: EUMETSAT and GPS interference](#8-regional-layers-eumetsat-and-gps-interference)
 - [How it was measured](#how-it-was-measured)
 - [Trade-offs and known limits](#trade-offs-and-known-limits)
 - [Commits](#commits)
@@ -211,6 +213,52 @@ record, and that record was offline.
   be offline hands over to the next camera not known to be offline. A camera
   the user or voice chose is never swapped.
 
+## 7. Idle cost, viewport culling and quality presets
+
+- **Paced rendering.** Moving fleets no longer hold the render loop at 60 fps.
+  Flights and military request a frame every 80 ms and AIS every 800 ms,
+  through one shared timer in `src/renderGovernor.js`. With flights, military
+  and AIS on, a parked camera dropped from 59 to ~13.5 renders/s and CPU from
+  41% to 28%.
+- **Hidden tab.** While the tab is hidden, data polling, HUD timers and the
+  pacer stop. Each layer that missed a refresh catches up once on return.
+- **Viewport culling.** The flights/military fleet tick updates aircraft inside
+  a padded view rectangle every tick. Aircraft far off screen get one update
+  every 25 ticks, round robin. It fails open: no view rectangle, focus or
+  cockpit mode, or bad coordinates mean nothing is skipped
+  (`src/data/viewBounds.js`). Istanbul, 7.3k flights: fleet tick
+  3.3 s → 0.72 s per 20 s, main-thread busy 33% → 19%.
+- **Quality presets.** The Display panel has a Quality row
+  (`src/app/renderQuality.js`). High is the stock look. Balanced uses 2× MSAA
+  and 3D tile SSE 24. Low adds 0.75× resolution, SSE 40 and no backdrop blur.
+  Use `?quality=` for one visit; the panel choice is remembered.
+- **Measured and skipped.** Two ideas were not worth their complexity:
+  - Batched marker creation: the first poll of 7.2k aircraft caused 2 long
+    tasks, the longest 80 ms.
+  - Worker JSON parsing: under 1 ms per minute, since Chrome parses
+    `response.json()` off the main thread.
+
+## 8. Regional layers: EUMETSAT and GPS interference
+
+- **Satellite clouds → "Europe · ME".** EUMETSAT Meteosat 0° SEVIRI 10.8 µm
+  infrared from EUMETSAT's keyless WMS, updated every 15 minutes, through the
+  existing weather proxy. The proxy now also reads ISO 8601
+  `start/end/PTnM` time intervals. Credited as "Contains modified EUMETSAT
+  Meteosat data <year>".
+- **GPS interference (24h).** An estimate over the Aegean, Anatolia, Cyprus
+  and the Levant: the share of distinct aircraft per 0.5° cell reporting
+  NACp < 8, using gpsjam.org thresholds.
+  - Source: adsb.lol (ODbL), polled one anchor every 12 s and only while the
+    layer is open.
+  - The 24 h window is kept in memory, so it restarts with the server.
+  - A cell needs at least 5 aircraft.
+  - This is our own implementation of the idea. No code from other forks was
+    copied.
+- **Not built: Bosphorus/Dardanelles transit counter.** AISStream's volunteer
+  receivers have almost no coverage at the straits. A 3-minute sample saw
+  1 vessel in the Bosphorus and 0 in the Dardanelles, so a counter would be
+  misleading.
+
 ## How it was measured
 
 - **Browser and setup:** headless Chrome 152 with Metal ANGLE on an Apple M3,
@@ -232,9 +280,8 @@ record, and that record was offline.
 - **Budgeted height samples** mean some ground anchors (ALPR, GeoJSON stems,
   bikeshare) settle over a few frames instead of all at once.
 - **Heavy sessions stay heavy.** With every layer on, the app still processes
-  about 10k flights, 12k ships and thousands of cameras worldwide on every
-  frame, including those far off-screen. Viewport-scoped processing would be
-  the next structural step; see the optimization plan.
+  about 12k ships and thousands of cameras worldwide. Only the aircraft fleet
+  tick is viewport-culled so far; vessels and CCTV are the next candidates.
 - **Caltrans and Ontario 511:** upstream CCTV feeds from these two can fail
   outside North America (connection timeouts and HTTP 400). This is unrelated
   to the fork.
@@ -249,3 +296,9 @@ record, and that record was offline.
 4. `perf(cctv)`: stop O(N²) main-thread work while cameras load
 5. `perf`: stop synchronous GPU readbacks that froze the Google 3D stack
 6. `chore`: hardened local launcher and these notes
+7. `fix(cctv)`: detect offline-camera placeholders
+8. `perf`: paced rendering for data layers and a hidden-tab pause
+9. `perf(fleet)`: skip per-tick work for aircraft far outside the view
+10. `feat(display)`: render quality presets
+11. `feat(weather)`: EUMETSAT Meteosat infrared for Europe, Africa, Middle East
+12. `feat(layers)`: GPS interference estimate from ADS-B NACp
