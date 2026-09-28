@@ -256,14 +256,19 @@ export class IntelHUD {
    * cadences and are cleaned up in {@link destroy}.
    */
   _startTimers() {
+    // Hidden tab (fork): nothing is on screen, so every HUD timer skips its
+    // tick; the next tick after the tab returns repaints (<= 1 s).
+    const hidden = () => globalThis.document?.hidden === true;
     // Timestamp — every second
     this._timestampInterval = setInterval(() => {
+      if (hidden()) return;
       const el = document.getElementById('hud-timestamp');
       if (el) el.textContent = this._formatUTC();
     }, 1000);
 
     // REC blink — every 800ms
     this._recBlinkInterval = setInterval(() => {
+      if (hidden()) return;
       this._recBlinkState = !this._recBlinkState;
       const dot = document.getElementById('hud-rec-dot');
       if (dot)
@@ -272,13 +277,13 @@ export class IntelHUD {
 
     // Camera-derived data — 4 updates/second (250ms)
     this._updateInterval = setInterval(() => {
-      if (!this._visible) return;
+      if (!this._visible || hidden()) return;
       this._updateCameraData();
     }, 250);
 
     // Semantic summary refresh cadence
     this._summaryInterval = setInterval(() => {
-      if (!this._visible) return;
+      if (!this._visible || hidden()) return;
       void this._updateSummary(true);
     }, HUD_SUMMARY_INTERVAL_MS);
   }

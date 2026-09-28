@@ -3486,3 +3486,27 @@ test('refreshLayerStats reaches presentation through the bare lifecycle', async 
   lifecycle.refreshLayerStats();
   assert.deepEqual(changes, ['status']);
 });
+
+test('a hidden tab skips poll ticks and replays each missed layer once on return', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
+  const manager = new DataLayerManager({});
+  const layer = makeSlowLayer('flights', { updateInterval: 1000 });
+  manager.register(layer.module);
+  await manager.setEnabled('flights', true, { origin: 'programmatic' });
+  const afterEnable = layer.calls.update;
+
+  manager.setSuspended(true);
+  t.mock.timers.tick(5000); // five due polls while hidden
+  await flushAsync();
+  assert.equal(layer.calls.update, afterEnable, 'no polling while hidden');
+
+  manager.setSuspended(false);
+  await flushAsync();
+  assert.equal(layer.calls.update, afterEnable + 1, 'exactly one catch-up refresh');
+
+  t.mock.timers.tick(1000);
+  await flushAsync();
+  assert.equal(layer.calls.update, afterEnable + 2, 'normal cadence resumes');
+  await manager.setEnabled('flights', false, { origin: 'programmatic' });
+});

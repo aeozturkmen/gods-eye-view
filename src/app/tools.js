@@ -121,6 +121,9 @@ export function createApplicationTools({
     const hidden = document.hidden;
     viewer.useDefaultRenderLoop = !hidden;
     cockpitCloudEffects?.setSuspended?.(hidden);
+    // Fork: pause periodic layer polls too; each missed layer refreshes once
+    // on return (DataLayerManager.setSuspended).
+    dataManager?.setSuspended?.(hidden);
     if (!hidden) {
       data.presentation.flushVisible();
       governorRequestRender('visibility-restore');

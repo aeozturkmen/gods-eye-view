@@ -514,6 +514,25 @@ export class LayerLifecycle {
     }
   }
 
+  /**
+   * Pause (hidden tab) or resume periodic polling. While suspended, due poll
+   * ticks are skipped and remembered; on resume each layer that missed one
+   * refreshes exactly once, then its normal cadence continues. Explicit
+   * refreshes (toggle, user actions) are never deferred.
+   * @param {boolean} suspended
+   */
+  setSuspended(suspended) {
+    const next = Boolean(suspended);
+    if (this._suspended === next) return;
+    this._suspended = next;
+    if (next) return;
+    for (const [layerId, entry] of this.layers) {
+      if (!entry.refreshMissedWhileHidden) continue;
+      entry.refreshMissedWhileHidden = false;
+      void this._runPeriodicUpdate(layerId, entry);
+    }
+  }
+
   _armUpdateLoop(layerId, entry) {
     const configuredRefreshInterval = Number(entry.module.refreshInterval);
     const updateInterval = Number(entry.module.updateInterval);
@@ -525,11 +544,17 @@ export class LayerLifecycle {
           : 0;
     if (refreshInterval > 0) {
       entry.intervalId = setInterval(() => {
+        // Hidden tab (fork): nobody sees the data, so skip the poll and
+        // replay it once when the tab is visible again (setSuspended).
+        if (this._suspended) {
+          entry.refreshMissedWhileHidden = true;
+          return;
+        }
         void this._runPeriodicUpdate(layerId, entry);
       }, refreshInterval);
     } else if (updateInterval === 0) {
       entry.intervalId = setInterval(() => {
-        if (!entry.enabled) return;
+        if (!entry.enabled || this._suspended) return;
         this._publishActivity({ type: 'status' });
       }, entry.module.statsRefreshInterval || 1000);
     }

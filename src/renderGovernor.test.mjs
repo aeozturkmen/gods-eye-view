@@ -6,6 +6,9 @@ import {
   releaseContinuousRender,
   governorRequestRender,
   getRenderGovernorDiagnostics,
+  holdPacedRender,
+  releasePacedRender,
+  _setPacerSchedulerForTest,
   _resetRenderGovernorForTest,
 } from './renderGovernor.js';
 
@@ -97,4 +100,90 @@ test('holds registered before install apply at install time', () => {
   assert.equal(scene.requestRenderMode, false, 'pre-install hold keeps continuous mode');
   releaseContinuousRender('flights');
   assert.equal(scene.requestRenderMode, true);
+});
+
+// ── Paced mode ──────────────────────────────────────────────────────────
+
+/** Manual scheduler: tests fire the pacer timer by hand. */
+function manualScheduler() {
+  const pending = [];
+  return {
+    pending,
+    schedule(fn, ms) {
+      const entry = { fn, ms, cancelled: false };
+      pending.push(entry);
+      return entry;
+    },
+    cancel(entry) {
+      if (entry) entry.cancelled = true;
+    },
+    fireNext() {
+      let entry = pending.shift();
+      while (entry?.cancelled) entry = pending.shift();
+      if (entry) entry.fn();
+      return entry;
+    },
+  };
+}
+
+test('paced holds keep requestRenderMode and request frames at the fastest cadence', () => {
+  const clock = manualScheduler();
+  _setPacerSchedulerForTest(clock, () => false);
+  const { viewer, scene, calls } = makeViewer();
+  installRenderGovernor(viewer);
+  holdPacedRender('ais-vessels', 800);
+  holdPacedRender('flights', 80);
+  assert.equal(scene.requestRenderMode, true);
+  const diag = getRenderGovernorDiagnostics();
+  assert.equal(diag.mode, 'paced');
+  assert.deepEqual(diag.holds, []);
+  assert.deepEqual(diag.paced, { 'ais-vessels': 800, flights: 80 });
+  const before = calls.requestRender;
+  const tick = clock.pending.at(-1);
+  assert.equal(tick.ms, 80);
+  clock.fireNext();
+  assert.ok(calls.requestRender > before);
+  // The chain re-arms itself at the current fastest interval.
+  assert.equal(clock.pending.filter((e) => !e.cancelled).at(-1).ms, 80);
+});
+
+test('a continuous hold wins over paced holds, and releasing it returns to paced', () => {
+  _setPacerSchedulerForTest(manualScheduler(), () => false);
+  const { viewer, scene } = makeViewer();
+  installRenderGovernor(viewer);
+  holdPacedRender('flights', 80);
+  holdContinuousRender('tracked-entity');
+  assert.equal(scene.requestRenderMode, false);
+  assert.equal(getRenderGovernorDiagnostics().mode, 'continuous');
+  releaseContinuousRender('tracked-entity');
+  assert.equal(scene.requestRenderMode, true);
+  assert.equal(getRenderGovernorDiagnostics().mode, 'paced');
+});
+
+test('releasing the last paced hold stops the pacer and returns to idle', () => {
+  const clock = manualScheduler();
+  _setPacerSchedulerForTest(clock, () => false);
+  const { viewer, calls } = makeViewer();
+  installRenderGovernor(viewer);
+  holdPacedRender('flights', 80);
+  releasePacedRender('flights');
+  assert.equal(getRenderGovernorDiagnostics().mode, 'idle');
+  const before = calls.requestRender;
+  for (const entry of clock.pending) if (!entry.cancelled) entry.fn();
+  assert.equal(calls.requestRender, before, 'no frames after release');
+});
+
+test('the pacer requests nothing while the tab is hidden', () => {
+  const clock = manualScheduler();
+  let hidden = true;
+  _setPacerSchedulerForTest(clock, () => hidden);
+  const { viewer, calls } = makeViewer();
+  installRenderGovernor(viewer);
+  holdPacedRender('flights', 80);
+  const before = calls.requestRender;
+  clock.fireNext();
+  assert.equal(calls.requestRender, before);
+  hidden = false;
+  clock.fireNext();
+  assert.equal(calls.requestRender, before + 1);
 });

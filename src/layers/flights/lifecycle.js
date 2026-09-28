@@ -1,5 +1,5 @@
 import * as Cesium from 'cesium';
-import { PLANE_MODEL_URL } from './policy.js';
+import { PLANE_MODEL_URL, FLEET_DR_INTERVAL_MS } from './policy.js';
 
 export function createLifecycle({
   flightState,
@@ -16,6 +16,17 @@ export function createLifecycle({
   } = services.sprites;
   const { onMilitaryLayerActiveChange } = services.militaryRegistry;
   const { holdContinuousRender, releaseContinuousRender } = services.render;
+  // Paced (fork): this layer's per-frame work only shows new state every
+  // FLEET_DR_INTERVAL_MS, so a parked camera needs a frame at that cadence, not 60 Hz.
+  // Fakes without the paced API fall back to the continuous hold.
+  const holdRender = () =>
+    services.render.holdPacedRender
+      ? services.render.holdPacedRender('flights', FLEET_DR_INTERVAL_MS)
+      : holdContinuousRender('flights');
+  const releaseRender = () => {
+    services.render.releasePacedRender?.('flights');
+    releaseContinuousRender('flights');
+  };
   const { ensureGeoidReady } = services.geoid;
   const { registerPickOwner, unregisterPickOwner } = services.picking;
 
@@ -142,7 +153,7 @@ export function createLifecycle({
     enable(viewer) {
       if (flightState._billboardCollection)
         flightState._billboardCollection.show = true;
-      holdContinuousRender('flights'); // per-frame animator (perf wave 2)
+      holdRender(); // per-frame animator (perf wave 2)
       if (flightState._modelCollection)
         flightState._modelCollection.show = true;
       parts.tracking._setCockpitContactMode(
@@ -208,7 +219,7 @@ export function createLifecycle({
       parts.tracking._cancelPendingTrackingRestore();
       if (flightState._billboardCollection)
         flightState._billboardCollection.show = false;
-      releaseContinuousRender('flights');
+      releaseRender();
       parts.rendering._releaseModels();
       if (flightState._modelCollection)
         flightState._modelCollection.show = false;
@@ -250,7 +261,7 @@ export function createLifecycle({
       flightState._enrichActive = 0;
       flightState._enrichLastDispatchMs = 0;
       parts.controller._abortActiveUpdates();
-      releaseContinuousRender('flights'); // direct-destroy path (perf wave 2 fix)
+      releaseRender(); // direct-destroy path (perf wave 2 fix)
       parts.tracking._clearTracking();
       parts.tracking._destroyTrail();
       parts.tracking._cancelPendingTrackingRestore();

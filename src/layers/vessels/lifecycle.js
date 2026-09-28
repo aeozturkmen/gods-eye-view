@@ -3,6 +3,7 @@ import {
   AIS_FIRST_CONNECT_GRACE_MS,
   AIS_FIRST_CONNECT_LABEL,
   AIS_HEALTHY_STATUSES,
+  VISIBILITY_UPDATE_MS,
 } from './policy.js';
 
 export function createLifecycle({
@@ -15,6 +16,17 @@ export function createLifecycle({
   const { state } = vesselState;
   const { restoreSpriteOrder, restoreSpriteOrderOnEnable } = services.sprites;
   const { holdContinuousRender, releaseContinuousRender } = services.render;
+  // Paced (fork): this layer's per-frame work only shows new state every
+  // VISIBILITY_UPDATE_MS, so a parked camera needs a frame at that cadence, not 60 Hz.
+  // Fakes without the paced API fall back to the continuous hold.
+  const holdRender = () =>
+    services.render.holdPacedRender
+      ? services.render.holdPacedRender('ais-vessels', VISIBILITY_UPDATE_MS)
+      : holdContinuousRender('ais-vessels');
+  const releaseRender = () => {
+    services.render.releasePacedRender?.('ais-vessels');
+    releaseContinuousRender('ais-vessels');
+  };
   const { ensureGeoidReady } = services.geoid;
   const { registerPickOwner, unregisterPickOwner } = services.picking;
 
@@ -167,7 +179,7 @@ export function createLifecycle({
       const wasEnabled = state.feed.enabled;
       state.feed.enabled = true;
       if (!wasEnabled) beginAisSession();
-      holdContinuousRender('ais-vessels'); // per-frame animator (perf wave 2)
+      holdRender(); // per-frame animator (perf wave 2)
       const activeViewer = viewer || state.viewer;
       components.rendering.ensureCollections(activeViewer);
       components.selection.installInteraction(activeViewer);
@@ -202,7 +214,7 @@ export function createLifecycle({
     disable() {
       state.feed.enabled = false;
       invalidateAisSession();
-      releaseContinuousRender('ais-vessels');
+      releaseRender();
       unregisterPickOwner('ais-live-vessels');
       components.rendering.setVisible(false);
       vesselState._vesselOverlayHost.clearSource(VESSEL_OVERLAY_SOURCE_ID);
@@ -220,7 +232,7 @@ export function createLifecycle({
     destroy(viewer) {
       const activeViewer = viewer || state.viewer;
       invalidateAisSession();
-      releaseContinuousRender('ais-vessels'); // direct-destroy path (perf wave 2 fix)
+      releaseRender(); // direct-destroy path (perf wave 2 fix)
       if (state.feed.abort) state.feed.abort.abort();
       unregisterPickOwner('ais-live-vessels');
       components.selection.clearVesselInspection();

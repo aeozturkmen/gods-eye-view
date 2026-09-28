@@ -377,15 +377,18 @@ try {
   check('camera movement while idle produces renders (≥10 / 2.5s)', duringMove.renders >= 10, duringMove);
   await new Promise((r) => setTimeout(r, 3_000)); // settle
 
-  // ── 4. flights enabled → continuous ───────────────────────────────────
+  // ── 4. flights enabled → paced at the fleet tick (fork) ───────────────
+  // A parked camera with flights on renders at the fleet dead-reckoning
+  // cadence (80 ms ≈ 12.5 Hz), not every vsync: frames between fleet ticks
+  // were pixel-identical.
   await page.evaluate(async () => {
     await window.__godsEyeView.dataManager.setEnabled('flights', true, { origin: 'user' });
   });
   await new Promise((r) => setTimeout(r, 5_000));
   const active = await countFrames(5_000);
   const d4 = await diag();
-  check('governor reports continuous mode with flights on', d4?.mode === 'continuous', d4);
-  check('flights-on cadence ≈ rAF cadence (≥70%)', active.renders >= active.rafs * 0.7, active);
+  check('governor reports paced mode with flights on', d4?.mode === 'paced' && d4?.paced?.flights === 80, d4);
+  check('flights-on parked cadence ≈ fleet tick (8–20 renders/s)', active.renders >= 40 && active.renders <= 100, active);
   check('flights-on renders ≥5× idle renders', active.renders >= Math.max(1, idle.renders) * 5, { active: active.renders, idle: idle.renders });
 
   // ── 5. flights disabled → idle again ──────────────────────────────────
