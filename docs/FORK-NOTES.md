@@ -1,7 +1,7 @@
 # Fork notes: Europe/Turkey CCTV, map controls and Google 3D performance
 
 This fork of [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view)
-branches from upstream `b210ab0` and adds five things:
+branches from upstream `b210ab0` and adds six things:
 
 1. a hardened local launcher (`gev.sh`),
 2. a Google Earth-style zoom control and a "quiet map" declutter toggle,
