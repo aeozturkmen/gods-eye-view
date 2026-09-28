@@ -254,10 +254,16 @@ record, and that record was offline.
   - A cell needs at least 5 aircraft.
   - This is our own implementation of the idea. No code from other forks was
     copied.
-- **Not built: Bosphorus/Dardanelles transit counter.** AISStream's volunteer
-  receivers have almost no coverage at the straits. A 3-minute sample saw
-  1 vessel in the Bosphorus and 0 in the Dardanelles, so a counter would be
-  misleading.
+- **Strait transits (official).** A card over the Bosphorus and the
+  Dardanelles shows the Ministry of Transport's published monthly transit
+  totals: latest month with its year-on-year change, per-hour/day/week
+  averages of that month, the last 3 and 12 months, tanker and >200 m share,
+  and naval transits.
+  - Data: `src/layers/straits/officialStats.json`, refreshed by
+    `scripts/update-strait-stats.py`. The ministry publishes each quarter.
+  - Live AIS is not used here. AISStream has no usable coverage at the
+    straits: a 3-minute sample saw 1 vessel in the Bosphorus and 0 in the
+    Dardanelles.
 
 ## How it was measured
 
@@ -302,3 +308,4 @@ record, and that record was offline.
 10. `feat(display)`: render quality presets
 11. `feat(weather)`: EUMETSAT Meteosat infrared for Europe, Africa, Middle East
 12. `feat(layers)`: GPS interference estimate from ADS-B NACp
+13. `feat(layers)`: official Bosphorus/Dardanelles transit cards
